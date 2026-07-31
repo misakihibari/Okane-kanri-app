@@ -305,6 +305,7 @@ a.extlink{color:inherit;text-decoration:none;}
   .legend .box{width:11px;height:11px;}
 }
 @media(max-width:380px){
+  .tab{font-size:10px;padding:9px 2px;}
   .swatches{grid-template-columns:repeat(7,1fr);}
   .cal td{height:50px;}
   .cal th{font-size:8.5px;}
@@ -354,9 +355,9 @@ a.extlink{color:inherit;text-decoration:none;}
   /* 入力フォームのカードは横スクロール不要 */
   .card-form{overflow-x:hidden;}
 
-  /* タブは横スクロールではなく2段に折り返す */
-  .tabs{flex-wrap:wrap;overflow-x:visible;gap:2px;padding:0 8px;}
-  .tab{padding:9px 10px;font-size:12.5px;}
+  /* タブは文字を小さくして1行に収める */
+  .tabs{flex-wrap:nowrap;overflow-x:visible;gap:0;padding:0 4px;}
+  .tab{padding:9px 4px;font-size:11px;white-space:nowrap;flex:1 1 auto;text-align:center;}
 }
 
 /* ===== スマホ：入出金・出費予定の一覧も1件ずつのカード風に折り返す ===== */
@@ -393,6 +394,82 @@ a.extlink{color:inherit;text-decoration:none;}
   table.list-bud td:nth-child(5){order:6;margin-left:auto;}
 }
 
+/* ---------- 時刻の10分単位セレクト ---------- */
+.time-pick{display:flex;align-items:center;gap:6px;}
+.time-pick select{flex:1;min-width:0;padding:8px 6px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);}
+.tp-sep{font-weight:700;color:var(--muted);}
+
+/* ---------- 月の予算バー ---------- */
+.bud-row{margin:12px 0;}
+.bud-total{margin-top:14px;padding-top:14px;border-top:2px solid var(--border);}
+.bud-total .bud-name{font-size:15px;}
+.bud-total .bud-rest strong{font-size:17px;}
+.bud-total .bud-bar{height:13px;}
+.bud-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:5px;}
+.bud-name{font-weight:700;font-size:14px;}
+.bud-rest{font-size:14px;white-space:nowrap;}
+.bud-bar{height:10px;border-radius:999px;background:#eef1f4;overflow:hidden;}
+.bud-bar span{display:block;height:100%;border-radius:999px;transition:width .25s;}
+.bud-sub{font-size:12px;margin-top:4px;}
+
+/* ---------- 日別（拡大）モーダル ---------- */
+.day-sum{
+  margin:8px 0 4px;padding:10px 12px;border-radius:10px;
+  background:#f3f6fb;border:1px solid var(--border);
+}
+.dsum-main{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:14px;}
+.dsum-main strong{font-size:19px;color:var(--accent);}
+.dsum-sub{font-size:12px;margin-top:3px;}
+.ds-top{display:flex;width:100%;align-items:baseline;justify-content:space-between;gap:10px;}
+.ds-pay{font-size:15px;font-weight:700;white-space:nowrap;}
+.day-list{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+.day-shift{
+  display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  width:100%;text-align:left;padding:12px 14px;
+  border:2px solid transparent;border-radius:10px;font-family:inherit;
+}
+.day-shift .ds-time{font-size:17px;font-weight:700;letter-spacing:.02em;}
+.day-shift .ds-name{font-size:14px;font-weight:600;}
+.day-shift .ds-sub{font-size:12px;opacity:.85;}
+.day-empty{
+  width:100%;padding:18px 14px;border:2px dashed var(--border);border-radius:10px;
+  background:#fafbfc;color:var(--muted);font-family:inherit;font-size:14px;font-weight:600;
+}
+.day-empty:hover{border-color:var(--accent);color:var(--accent);}
+
+/* ===== スマホ：勤務先別 給与を項目名つきで折り返す ===== */
+@media(max-width:600px){
+  table.list-pay,table.list-pay thead,table.list-pay tbody,
+  table.list-pay tr,table.list-pay td{display:block;}
+  table.list-pay thead{display:none;}
+  table.list-pay tr{
+    display:flex;flex-wrap:wrap;align-items:center;
+    gap:4px 10px;padding:10px 2px;border-bottom:1px solid #eef1f4;
+  }
+  table.list-pay tr:last-child{border-bottom:none;}
+  table.list-pay td{
+    padding:0;border:none;font-size:12px;text-align:left;
+    flex:0 0 calc(50% - 5px);min-width:0;
+    display:flex;justify-content:space-between;align-items:baseline;gap:6px;
+  }
+  table.list-pay td::before{
+    content:attr(data-l);color:var(--muted);font-size:10px;font-weight:700;white-space:nowrap;
+  }
+  /* 1段目：勤務先名 …… 編集ボタン */
+  table.list-pay td:nth-child(1){order:1;flex:1 1 auto;}
+  table.list-pay td:nth-child(9){order:2;flex:0 0 auto;margin-left:auto;}
+  table.list-pay td:nth-child(1)::before,
+  table.list-pay td:nth-child(9)::before{content:none;}
+  /* 2段目以降：2項目ずつ並べる */
+  table.list-pay td:nth-child(2){order:3;}
+  table.list-pay td:nth-child(3){order:4;}
+  table.list-pay td:nth-child(4){order:5;}
+  table.list-pay td:nth-child(5){order:6;}
+  table.list-pay td:nth-child(6){order:7;}
+  table.list-pay td:nth-child(7){order:8;}
+  table.list-pay td:nth-child(8){order:9;flex:0 0 100%;}
+}
+
 /* ===== iOS Safari：入力欄タップ時の自動ズーム防止（16px未満だと拡大される） =====
    他の指定に負けないよう、スタイルの最後にまとめて置いています */
 @supports (-webkit-touch-callout:none){
@@ -416,10 +493,10 @@ a.extlink{color:inherit;text-decoration:none;}
 <nav class="tabs" id="tabs">
   <button class="tab active" data-view="all">すべて</button>
   <button class="tab" data-view="expense">出費記録</button>
-  <button class="tab" data-view="payment">支払方法</button>
+  <button class="tab" data-view="payment">収支記録</button>
   <button class="tab" data-view="bank">銀行口座</button>
   <button class="tab" data-view="shift">シフト・給与</button>
-  <button class="tab" data-view="budget">予算</button>
+  <button class="tab" data-view="budget">出費予定</button>
 </nav>
 
 <main id="app"></main>
@@ -499,7 +576,8 @@ function defaultState() {
     bankTx: [],
     workplaces: [],
     shifts: [],
-    budgets: []
+    budgets: [],
+    monthlyBudget: {}
   };
 }
 
@@ -544,7 +622,19 @@ function commit() { save(); render(true); }
 const genreById = id => state.genres.find(g => g.id === id) || { name: '(未分類)', color: '#cccccc' };
 const pmById    = id => state.paymentMethods.find(p => p.id === id) || { name: '(不明)', color: '#cccccc', type: 'cash', url: '' };
 const wpById    = id => state.workplaces.find(w => w.id === id) || { name: '(不明)', color: '#cccccc', wage: 0, payday: 25, transport: 0 };
-const acById    = id => state.bankAccounts.find(a => a.id === id) || { bankName: '', accountName: '(不明)', color: '#cccccc', initialBalance: 0 };
+
+/** その月のカード・現金の予算を取り出す（未設定は0） */
+function monthBudget(mm) {
+  const b = (state.monthlyBudget || {})[mm] || {};
+  return { card: Number(b.card) || 0, cash: Number(b.cash) || 0 };
+}
+function setMonthBudget(mm, card, cash) {
+  if (!state.monthlyBudget) state.monthlyBudget = {};
+  state.monthlyBudget[mm] = { card: card, cash: cash };
+}
+/** 現金払いかどうか（現金以外はすべてカード扱い） */
+function isCashPayment(pmId) { return pmById(pmId).type === 'cash'; }
+const acById    = id => state.bankAccounts.find(a => a.id === id) || { bankName: '(不明)', color: '#cccccc', initialBalance: 0 };
 
 /* ============================================================
    2. 日本の祝日判定
@@ -606,6 +696,62 @@ function holidayName(date) {
   return jpHolidays(date.getFullYear())[(date.getMonth() + 1) + '-' + date.getDate()] || null;
 }
 
+/** 「25」→「25日」、「end」→「月末」 */
+function dayLabel(v) { return v === 'end' ? '月末' : (v == null ? '—' : v + '日'); }
+
+/** 1〜31日＋月末 の選択肢 */
+function dayOpts31() {
+  const o = [];
+  for (let i = 1; i <= 31; i++) o.push({ value: String(i), label: i + '日' });
+  o.push({ value: 'end', label: '月末' });
+  return o;
+}
+
+/** その月の給料に対応する勤務期間を、勤務先の締め日で区切って返す */
+function payPeriod(wp, month) {
+  const [y, m] = month.split('-').map(Number);
+  const cut = wp.cutoff;
+  if (cut == null || cut === 'end') {
+    return { from: ymd(new Date(y, m - 1, 1)), to: ymd(new Date(y, m, 0)) };
+  }
+  const c = Number(cut) || 31;
+  const prevLast = new Date(y, m - 1, 0).getDate();
+  const curLast  = new Date(y, m, 0).getDate();
+  return {
+    from: ymd(new Date(y, m - 2, Math.min(c, prevLast) + 1)),
+    to:   ymd(new Date(y, m - 1, Math.min(c, curLast)))
+  };
+}
+
+/** クレジットカードの引き落とし日が休日（土日祝）のとき、次の平日にずらすかどうかの設定を反映して
+ *  実際の引き落とし日を返す */
+function actualWithdrawalDate(pm, year, month) {
+  const lastDay = new Date(year, month, 0).getDate();
+  let d = new Date(year, month - 1, Math.min(pm.withdrawalDay || 27, lastDay));
+  if (pm.withdrawalShift) {
+    let guard = 0;
+    while ((d.getDay() === 0 || d.getDay() === 6 || holidayName(d)) && guard++ < 20) {
+      d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+    }
+  }
+  return d;
+}
+
+/** その月の実際の給料日を返す。
+ *  勤務先の設定が「前倒し」なら、給料日が土日祝のとき直前の平日まで戻す */
+function actualPayday(wp, year, month) {
+  const lastDay = new Date(year, month, 0).getDate();
+  const dayNum = wp.payday === 'end' ? lastDay : Math.min(Number(wp.payday) || 25, lastDay);
+  let d = new Date(year, month - 1, dayNum);
+  if (wp.paydayShift) {
+    let guard = 0;
+    while ((d.getDay() === 0 || d.getDay() === 6 || holidayName(d)) && guard++ < 20) {
+      d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
+    }
+  }
+  return d;
+}
+
 /* ============================================================
    3. 集計ロジック
    ============================================================ */
@@ -632,14 +778,15 @@ function shiftHours(s) {
 /** 勤務先ごとの月間集計（確定分 / 確定+仮） */
 function payrollOfMonth(month) {
   const res = state.workplaces.map(w => {
-    const list = state.shifts.filter(s => s.workplaceId === w.id && inMonth(s.date, month));
+    const per = payPeriod(w, month);
+    const list = state.shifts.filter(s => s.workplaceId === w.id && s.date >= per.from && s.date <= per.to);
     const conf = list.filter(s => s.status === 'confirmed');
     const hoursConf = conf.reduce((a, s) => a + shiftHours(s), 0);
     const hoursAll  = list.reduce((a, s) => a + shiftHours(s), 0);
     const daysConf  = new Set(conf.map(s => s.date)).size;
     const daysAll   = new Set(list.map(s => s.date)).size;
     return {
-      wp: w,
+      wp: w, period: per,
       hoursConf, hoursAll,
       wageConf: Math.round(hoursConf * w.wage),
       wageAll:  Math.round(hoursAll  * w.wage),
@@ -650,12 +797,24 @@ function payrollOfMonth(month) {
   });
   return res;
 }
-/** 口座残高（指定日まで／全期間） */
+/** その口座を引き落とし先にしているデビットカードでの出費合計 */
+function debitOutOf(accountId, untilDate) {
+  const ids = state.paymentMethods
+    .filter(p => p.type === 'debit' && p.accountId === accountId)
+    .map(p => p.id);
+  if (!ids.length) return 0;
+  return state.expenses
+    .filter(e => ids.indexOf(e.pmId) !== -1 && (!untilDate || e.date <= untilDate))
+    .reduce((a, e) => a + e.amount, 0);
+}
+
+/** 口座残高（指定日まで／全期間）。デビットカードの利用分も差し引く */
 function balanceOf(accountId, untilDate) {
   const ac = acById(accountId);
-  return state.bankTx
+  const byTx = state.bankTx
     .filter(t => t.accountId === accountId && (!untilDate || t.date <= untilDate))
     .reduce((a, t) => a + (t.type === 'in' ? t.amount : -t.amount), ac.initialBalance || 0);
+  return byTx - debitOutOf(accountId, untilDate);
 }
 
 /* ============================================================
@@ -671,6 +830,7 @@ const monthOf = {
   shift:    THIS_MONTH,   // シフト・給与セクションの一括指定
   expGenre: THIS_MONTH,   // ジャンル別 合計金額
   expList:  THIS_MONTH,   // 出費一覧
+  expBudget: THIS_MONTH,  // 月の予算（カード・現金）
   payUsage: THIS_MONTH,   // 支払方法別 利用額
   payDue:   THIS_MONTH,   // 支払予定額
   payRatio: THIS_MONTH,   // 利用額 構成比
@@ -772,7 +932,7 @@ function closeModal() { $('#modalRoot').innerHTML = ''; }
  * type: text | number | date | time | month | select | textarea | radio | color
  */
 function formModal(opts) {
-  const { title, fields, submitLabel = '保存', onSubmit, onDelete, deleteLabel = '削除' } = opts;
+  const { title, fields, submitLabel = '保存', onSubmit, onDelete, deleteLabel = '削除', onRender } = opts;
   let colorState = {};
 
   const fieldHtml = f => {
@@ -796,6 +956,20 @@ function formModal(opts) {
         '<span class="spacer"></span>' +
         '<label class="cc-pick">自由な色を選ぶ<input type="color" data-custom-for="' + f.key + '" value="' + esc(cur) + '"></label>' +
         '</div></div>';
+    }
+    if (f.type === 'time10') {
+      const v = String(f.value || '09:00');
+      const hh = v.slice(0, 2), mi = v.slice(3, 5);
+      const mins = ['00', '10', '20', '30', '40', '50'];
+      if (mins.indexOf(mi) === -1 && /^\d\d$/.test(mi)) { mins.push(mi); mins.sort(); }
+      const hOpts = Array.from({ length: 24 }, (_, i) => pad2(i))
+        .map(h => '<option value="' + h + '"' + (h === hh ? ' selected' : '') + '>' + h + '</option>').join('');
+      const mOpts = mins
+        .map(m => '<option value="' + m + '"' + (m === mi ? ' selected' : '') + '>' + m + '</option>').join('');
+      return '<div class="field"><label>' + esc(f.label) + '</label><div class="time-pick">' +
+        '<select name="' + f.key + '__h">' + hOpts + '</select><span class="tp-sep">:</span>' +
+        '<select name="' + f.key + '__m">' + mOpts + '</select></div>' +
+        (f.hint ? '<span class="muted">' + esc(f.hint) + '</span>' : '') + '</div>';
     }
     if (f.type === 'select') {
       return '<div class="field"><label>' + esc(f.label) + '</label><select name="' + f.key + '"' + (f.required ? ' required' : '') + '>' +
@@ -860,12 +1034,14 @@ function formModal(opts) {
     const data = {};
     fields.forEach(f => {
       if (f.type === 'color') data[f.key] = colorState[f.key];
+      else if (f.type === 'time10') data[f.key] = (fd.get(f.key + '__h') || '00') + ':' + (fd.get(f.key + '__m') || '00');
       else if (f.type === 'number') data[f.key] = Number(fd.get(f.key) || 0);
       else data[f.key] = fd.get(f.key);
     });
     closeModal();
     onSubmit(data);
   });
+  if (onRender) onRender($('#modalForm'));
   const first = $('#modalForm input, #modalForm select');
   if (first) first.focus();
 }
@@ -895,19 +1071,56 @@ function editGenre(g) {
 function editPayment(p) {
   const isCash = p && p.type === 'cash';
   formModal({
-    title: p ? '支払方法を編集' : 'カード会社を追加',
+    title: p ? '支払方法を編集' : 'カードを追加',
     fields: [
+      ...(isCash ? [] : [{ key: 'cardType', label: 'カードの種類', type: 'select',
+        value: p && p.type === 'debit' ? 'debit' : 'card',
+        options: [{ value: 'card', label: 'クレジットカード' }, { value: 'debit', label: 'デビットカード' }],
+        hint: 'デビットカードは支払予定額（引き落とし）の合計には含めません' }]),
       { key: 'name',  label: isCash ? '名称' : 'カード会社名', type: 'text', value: p ? p.name : '', required: true, placeholder: '例：〇〇カード' },
       ...(isCash ? [] : [{ key: 'withdrawalDay', label: '引き落とし日（毎月◯日）', type: 'number',
         value: p && p.withdrawalDay ? p.withdrawalDay : 27, min: 1, max: 31,
-        hint: 'カード名の下に表示されます。利用分は翌月のこの日に引き落とされます' }]),
-      { key: 'url',   label: 'アプリ／マイページのURL', type: 'text', value: p ? p.url : '',
-        placeholder: 'https://...', hint: isCash ? '現金は不要です' : '名前をクリックするとこのURLを開きます' },
+        hint: 'クレジットカードのみ使います。利用分は翌月のこの日に引き落とされます' }]),
+      ...(isCash ? [] : [{ key: 'withdrawalShift', label: '引き落とし日が土日祝のとき', type: 'select',
+        value: (p && p.withdrawalShift) ? '1' : '0',
+        options: [{ value: '0', label: 'そのままにする' }, { value: '1', label: '次の平日にずらす' }],
+        hint: '例：27日が土曜なら、29日（月）に引き落とされます' }]),
+      ...(isCash ? [] : [{ key: 'accountId', label: '引き落とし先の銀行口座', type: 'select',
+        value: String(p && p.accountId ? p.accountId : ''),
+        options: [{ value: '', label: state.bankAccounts.length ? '（設定しない）' : '（口座が未登録です）' }]
+          .concat(state.bankAccounts.map(a => ({ value: String(a.id), label: a.bankName }))),
+        hint: 'デビットカードのみ使います。出費を記録すると、この口座の残高から自動で引かれます' }]),
       { key: 'color', label: '表示色', type: 'color', value: p ? p.color : nextColor(state.paymentMethods.map(x => x.color)) }
     ],
+    /* デビットを選んだときは「引き落とし日」の欄を隠す */
+    onRender: isCash ? null : form => {
+      const sel = form.querySelector('[name="cardType"]');
+      const wd  = form.querySelector('[name="withdrawalDay"]');
+      const ws  = form.querySelector('[name="withdrawalShift"]');
+      const ac  = form.querySelector('[name="accountId"]');
+      if (!sel || !wd || !ac) return;
+      const wdBox = wd.closest('.field'), acBox = ac.closest('.field');
+      const wsBox = ws ? ws.closest('.field') : null;
+      /* クレジットなら引き落とし日まわり、デビットなら引き落とし先口座だけを見せる */
+      const sync = () => {
+        const debit = sel.value === 'debit';
+        wdBox.style.display = debit ? 'none' : '';
+        if (wsBox) wsBox.style.display = debit ? 'none' : '';
+        acBox.style.display = debit ? '' : 'none';
+      };
+      sel.addEventListener('change', sync);
+      sync();
+    },
     onSubmit: d => {
-      if (p) { p.name = d.name; p.url = d.url; p.color = d.color; if (!isCash) p.withdrawalDay = d.withdrawalDay || null; }
-      else state.paymentMethods.push({ id: uid(), type: 'card', name: d.name, url: d.url, color: d.color, withdrawalDay: d.withdrawalDay || null });
+      const t = isCash ? 'cash' : (d.cardType === 'debit' ? 'debit' : 'card');
+      const wd = t === 'debit' ? null : (d.withdrawalDay || null);
+      const wshift = t === 'debit' ? false : d.withdrawalShift === '1';
+      const ai = t === 'debit' ? (Number(d.accountId) || null) : null;
+      if (p) {
+        p.name = d.name; p.color = d.color;
+        if (!isCash) { p.type = t; p.withdrawalDay = wd; p.withdrawalShift = wshift; p.accountId = ai; }
+      }
+      else state.paymentMethods.push({ id: uid(), type: t, name: d.name, url: '', color: d.color, withdrawalDay: wd, withdrawalShift: wshift, accountId: ai });
       commit();
     },
     onDelete: (p && !isCash) ? () => {
@@ -922,7 +1135,6 @@ function editAccount(a) {
     title: a ? '口座を編集' : '銀行口座を追加',
     fields: [
       { key: 'bankName',       label: '銀行名',   type: 'text',   value: a ? a.bankName : '', required: true, placeholder: '例：〇〇銀行' },
-      { key: 'accountName',    label: '口座の表示名', type: 'text', value: a ? a.accountName : '', required: true, placeholder: '例：生活費口座' },
       { key: 'initialBalance', label: '記録開始時点の残高（円）', type: 'number', value: a ? a.initialBalance : 0, step: '1' },
       { key: 'color',          label: '表示色',   type: 'color',  value: a ? a.color : nextColor(state.bankAccounts.map(x => x.color)) }
     ],
@@ -932,6 +1144,12 @@ function editAccount(a) {
       commit();
     },
     onDelete: a ? () => {
+      /* この口座を引き落とし先にしているデビットカードがあれば止める */
+      const used = state.paymentMethods.filter(pm => pm.type === 'debit' && pm.accountId === a.id);
+      if (used.length) {
+        alert('この口座は「' + used.map(pm => pm.name).join('、') + '」の引き落とし先に設定されているため削除できません。\n先に収支記録でカード側の設定を変更してください。');
+        return;
+      }
       state.bankTx = state.bankTx.filter(t => t.accountId !== a.id);
       state.bankAccounts = state.bankAccounts.filter(x => x.id !== a.id);
       commit();
@@ -946,13 +1164,21 @@ function editWorkplace(w) {
     fields: [
       { key: 'name',      label: '店舗名',       type: 'text',   value: w ? w.name : '', required: true, placeholder: '例：〇〇カフェ' },
       { key: 'wage',      label: '時給（円）',    type: 'number', value: w ? w.wage : 1100, required: true, min: 0, step: '1' },
-      { key: 'payday',    label: '給料日（毎月◯日）', type: 'number', value: w ? w.payday : 25, required: true, min: 1, max: 31 },
+      { key: 'cutoff',    label: '締め日', type: 'select',
+        value: String(w && w.cutoff != null ? w.cutoff : 'end'), options: dayOpts31() },
+      { key: 'payday',    label: '給料日', type: 'select', required: true,
+        value: String(w && w.payday != null ? w.payday : 25), options: dayOpts31() },
+      { key: 'paydayShift', label: '給料日が土日祝のとき', type: 'select',
+        value: (w && !w.paydayShift) ? '0' : '1',
+        options: [{ value: '1', label: '前の平日に前倒しする' }, { value: '0', label: 'そのままにする' }],
+        hint: '例：25日が日曜なら、23日（金）を給料日として表示します' },
       { key: 'transport', label: '往復交通費（1勤務あたり・円）', type: 'number', value: w ? w.transport : 0, min: 0, step: '1' },
       { key: 'color',     label: '表示色',       type: 'color',  value: w ? w.color : nextColor(state.workplaces.map(x => x.color)) }
     ],
     onSubmit: d => {
-      if (w) Object.assign(w, d);
-      else state.workplaces.push({ id: uid(), ...d });
+      const data = Object.assign({}, d, { paydayShift: d.paydayShift === '1' });
+      if (w) Object.assign(w, data);
+      else state.workplaces.push({ id: uid(), ...data });
       commit();
     },
     onDelete: w ? () => {
@@ -964,6 +1190,68 @@ function editWorkplace(w) {
   });
 }
 
+/** カレンダーの1日を大きく表示する。シフトをタップで編集、空欄をタップで追加 */
+function dayModal(ds) {
+  const [yy, mm, dd] = ds.split('-').map(Number);
+  const date = new Date(yy, mm - 1, dd);
+  const dows = ['日', '月', '火', '水', '木', '金', '土'];
+  const hol = holidayName(date);
+  const list = state.shifts.filter(s => s.date === ds).sort((a, b) => a.start < b.start ? -1 : 1);
+
+  const payOf = s => Math.round(shiftHours(s) * (wpById(s.workplaceId).wage || 0));
+  const items = list.map(s => {
+    const w = wpById(s.workplaceId);
+    const conf = s.status === 'confirmed';
+    const style = conf
+      ? 'background:' + w.color + ';color:' + textOn(w.color) + ';border-color:' + w.color
+      : 'background:#fff;border-color:' + w.color + ';color:' + w.color;
+    return '<button type="button" class="day-shift" data-dshift="' + s.id + '" style="' + style + '">' +
+      '<span class="ds-top"><span class="ds-time">' + esc(s.start) + ' 〜 ' + esc(s.end) + '</span>' +
+      '<span class="ds-pay">' + yen(payOf(s)) + '</span></span>' +
+      '<span class="ds-name">' + esc(w.name) + '</span>' +
+      '<span class="ds-sub">実働 ' + shiftHours(s).toFixed(1) + 'h' +
+      (s.breakMin ? '（休憩' + s.breakMin + '分）' : '') + ' ／ ' + (conf ? '確定' : '仮') + '</span>' +
+      '</button>';
+  }).join('');
+
+  /* その日に稼いだ金額のまとめ */
+  const payAll  = list.reduce((a, s) => a + payOf(s), 0);
+  const payConf = list.filter(s => s.status === 'confirmed').reduce((a, s) => a + payOf(s), 0);
+  const trans   = Array.from(new Set(list.map(s => s.workplaceId)))
+    .reduce((a, id) => a + (wpById(id).transport || 0), 0);
+  const hasTent = list.some(s => s.status !== 'confirmed');
+  const sumLine = list.length
+    ? '<div class="day-sum">' +
+      '<div class="dsum-main"><span>この日の給与</span><strong>' + yen(payAll) + '</strong></div>' +
+      '<div class="dsum-sub muted">' +
+      (hasTent ? '確定分のみ ' + yen(payConf) + '　' : '') +
+      (trans ? '交通費 ' + yen(trans) + '　' : '') +
+      '合計 ' + yen(payAll + trans) + '</div></div>'
+    : '';
+
+  const dowCls = date.getDay() === 0 || hol ? 'sun' : date.getDay() === 6 ? 'sat' : '';
+  $('#modalRoot').innerHTML =
+    '<div class="modal-back"><div class="modal">' +
+    '<h3 class="' + dowCls + '">' + mm + '月' + dd + '日（' + dows[date.getDay()] + '）' +
+      (hol ? '<span class="muted" style="font-weight:400"> ' + esc(hol) + '</span>' : '') + '</h3>' +
+    sumLine +
+    '<div class="day-list">' + items +
+    '<button type="button" class="day-empty" data-dadd="1">＋ この日にシフトを追加</button>' +
+    '</div>' +
+    '<div class="modal-actions"><button type="button" class="btn" id="mCancel">閉じる</button></div>' +
+    '</div></div>';
+
+  $('#mCancel').onclick = closeModal;
+  $('.modal-back').addEventListener('mousedown', ev => { if (ev.target.classList.contains('modal-back')) closeModal(); });
+  $$('#modalRoot [data-dshift]').forEach(b => {
+    b.onclick = () => {
+      const s = state.shifts.find(x => x.id === Number(b.dataset.dshift));
+      if (s) editShift(s);
+    };
+  });
+  $('#modalRoot [data-dadd]').onclick = () => editShift(null, ds);
+}
+
 function editShift(shift, dateStr) {
   if (!state.workplaces.length) { alert('先に勤務先を追加してください。'); return; }
   formModal({
@@ -973,8 +1261,8 @@ function editShift(shift, dateStr) {
         value: shift ? shift.workplaceId : state.workplaces[0].id,
         options: state.workplaces.map(w => ({ value: w.id, label: w.name })) },
       { key: 'date',     label: '勤務日',   type: 'date', value: shift ? shift.date : dateStr, required: true },
-      { key: 'start',    label: '開始時刻', type: 'time', value: shift ? shift.start : '09:00', required: true },
-      { key: 'end',      label: '終了時刻', type: 'time', value: shift ? shift.end : '17:00', required: true },
+      { key: 'start',    label: '開始時刻', type: 'time10', value: shift ? shift.start : '09:00' },
+      { key: 'end',      label: '終了時刻', type: 'time10', value: shift ? shift.end : '17:00' },
       { key: 'breakMin', label: '休憩（分）', type: 'number', value: shift ? shift.breakMin : 0, min: 0, step: '5' },
       { key: 'status',   label: 'シフト区分', type: 'radio', value: shift ? shift.status : 'confirmed',
         options: [{ value: 'confirmed', label: '確定（塗りつぶし）' }, { value: 'tentative', label: '仮（外枠のみ）' }] }
@@ -1053,6 +1341,13 @@ function viewExpense() {
   const list = monthExpenses(ML);
   const total = list.reduce((a, e) => a + e.amount, 0);
 
+  /* 月の予算（カード・現金）と、そこから引いた残り */
+  const MB = monthOf.expBudget, TB = monthLabelOf(MB);
+  const budList  = monthExpenses(MB);
+  const usedCash = budList.filter(e => isCashPayment(e.pmId)).reduce((a, e) => a + e.amount, 0);
+  const usedCard = budList.reduce((a, e) => a + e.amount, 0) - usedCash;
+  const bud = monthBudget(MB);
+
   const genreOptions = state.genres.map(g => '<option value="' + g.id + '">' + esc(g.name) + '</option>').join('') +
     '<option value="__new">＋ 新規ジャンルを追加…</option>';
   const pmOptions = state.paymentMethods.map(p => '<option value="' + p.id + '">' + esc(p.name) + '</option>').join('');
@@ -1086,6 +1381,37 @@ function viewExpense() {
       rows + '</tbody></table>' + totalLine(TL + ' の出費合計', total) : emptyBox('この月の出費記録はまだありません。')) +
     '</div>';
 
+  const budBar = (label, budget, used, color, isTotal) => {
+    const over = budget > 0 && used > budget;
+    const pct  = budget > 0 ? Math.min(100, Math.round(used / budget * 100)) : 0;
+    return '<div class="bud-row' + (isTotal ? ' bud-total' : '') + '">' +
+      '<div class="bud-head">' +
+      '<span class="bud-name"><span class="color-bar" style="background:' + color + '"></span>' + label + '</span>' +
+      '<span class="bud-rest">' + (budget > 0
+        ? (over ? '<strong style="color:var(--sun)">' + yen(used - budget) + ' オーバー</strong>'
+                : '残り <strong style="color:#1e7e34">' + yen(budget - used) + '</strong>')
+        : '<span class="muted">予算 未設定</span>') + '</span></div>' +
+      '<div class="bud-bar"><span style="width:' + pct + '%;background:' + (over ? 'var(--sun)' : color) + '"></span></div>' +
+      '<div class="bud-sub muted">予算 ' + (budget > 0 ? yen(budget) : '—') +
+        '　使用 ' + yen(used) + (budget > 0 ? '（' + pct + '%）' : '') + '</div>' +
+      '</div>';
+  };
+
+  const budgetCard =
+    '<div class="card">' + cardHead(TB + ' の予算', monthPick('expBudget')) +
+    budBar('カード', bud.card, usedCard, '#2D9CDB') +
+    budBar('現金',   bud.cash, usedCash, '#6FCF97') +
+    budBar('合計',   bud.card + bud.cash, usedCard + usedCash, '#2f5496', true) +
+    '<form id="mbudForm"><div class="row" style="margin-top:12px">' +
+    '<div class="field"><label>カードの予算（円）</label>' +
+    '<input type="number" name="card" min="0" step="1" value="' + (bud.card || '') + '" placeholder="0"></div>' +
+    '<div class="field"><label>現金の予算（円）</label>' +
+    '<input type="number" name="cash" min="0" step="1" value="' + (bud.cash || '') + '" placeholder="0"></div>' +
+    '<div class="form-actions"><button type="submit" class="btn btn-primary">予算を保存</button></div>' +
+    '</div></form>' +
+    '<div class="muted" style="margin-top:10px">出費を記録すると、その月の予算から自動的に差し引かれます。' +
+    'デビットカードを含むカード払いは「カード」に集計されます。</div></div>';
+
   const genreCard =
     '<div class="card">' + cardHead(TG + ' のジャンル別 合計金額', monthPick('expGenre')) +
     '<div class="row" style="align-items:center;gap:22px">' +
@@ -1097,10 +1423,17 @@ function viewExpense() {
       '<span class="color-bar" style="background:' + g.color + ';height:12px;vertical-align:-2px"></span>' + esc(g.name) + '</button>').join('') +
     '<button class="btn btn-sm btn-primary" data-add-genre>＋ ジャンル追加</button></div></div>';
 
-  return form + genreCard + listCard;
+  return form + budgetCard + genreCard + listCard;
 }
 
 function bindExpense() {
+  const mb = $('#mbudForm');
+  if (mb) mb.addEventListener('submit', ev => {
+    ev.preventDefault();
+    const fd = new FormData(mb);
+    setMonthBudget(monthOf.expBudget, Number(fd.get('card') || 0), Number(fd.get('cash') || 0));
+    commit();
+  });
   const f = $('#expForm');
   if (!f) return;
   $('#genreSel').addEventListener('change', ev => {
@@ -1139,16 +1472,18 @@ function viewPayment() {
 
   const tiles = items.map(({ pm, value }) => {
     const fg = textOn(pm.color);
-    const linkable = pm.type === 'card' && pm.url;
-    return '<div class="tile filled' + (linkable ? ' clickable' : '') + '" style="background:' + pm.color + ';color:' + fg + ';border-color:' + pm.color + '"' +
-      (linkable ? ' data-open-url="' + esc(pm.url) + '"' : '') + '>' +
-      '<div class="tile-label" style="color:' + fg + '">' + esc(pm.name) + (pm.type === 'card' ? '（カード）' : '') + '</div>' +
-      (pm.type === 'card'
-        ? '<div class="tile-note">' + (pm.withdrawalDay ? '毎月' + pm.withdrawalDay + '日 引き落とし' : '引き落とし日 未設定') + '</div>'
+    const isCard  = pm.type === 'card';
+    const isDebit = pm.type === 'debit';
+    const kind = isCard ? '（クレジット）' : isDebit ? '（デビット）' : '';
+    return '<div class="tile filled" style="background:' + pm.color + ';color:' + fg + ';border-color:' + pm.color + '">' +
+      '<div class="tile-label" style="color:' + fg + '">' + esc(pm.name) + kind + '</div>' +
+      (isCard
+        ? '<div class="tile-note">' + (pm.withdrawalDay
+            ? '毎月' + pm.withdrawalDay + '日 引き落とし' + (pm.withdrawalShift ? '※' : '')
+            : '引き落とし日 未設定') + '</div>'
         : '') +
       '<div class="tile-value">' + yen(value) + '</div>' +
-      '<div class="tile-sub">' + (linkable ? '<span class="pill-link">タップでマイページを開く</span>'
-        : (pm.type === 'card' ? 'URL未登録' : TU + 'の利用額')) + '</div>' +
+      '<div class="tile-sub">' + TU + 'の利用額</div>' +
       '<div style="margin-top:8px"><button class="btn btn-sm" data-edit-pm="' + pm.id + '" style="background:rgba(255,255,255,.9);color:#000;border-color:transparent">編集</button></div>' +
       '</div>';
   }).join('');
@@ -1174,21 +1509,27 @@ function viewPayment() {
   const dueBody = cards.length
     ? '<table class="list"><thead><tr><th>カード会社</th><th>引き落とし日</th>' +
       '<th class="right">' + esc(prevLabel) + ' の利用額</th></tr></thead><tbody>' +
-      dueItems.map(d =>
-        '<tr><td><span class="chip" style="background:' + d.pm.color + ';color:' + textOn(d.pm.color) + '">' + esc(d.pm.name) + '</span></td>' +
-        '<td>' + (d.pm.withdrawalDay
-          ? '<strong>' + TD + ' ' + d.pm.withdrawalDay + '日</strong>'
+      dueItems.map(d => {
+        const [dy, dm] = MD.split('-').map(Number);
+        const wDate = d.pm.withdrawalDay ? actualWithdrawalDate(d.pm, dy, dm) : null;
+        return '<tr><td><span class="chip" style="background:' + d.pm.color + ';color:' + textOn(d.pm.color) + '">' + esc(d.pm.name) + '</span></td>' +
+        '<td>' + (wDate
+          ? '<strong>' + (wDate.getMonth() + 1) + '月' + wDate.getDate() + '日</strong>' + (d.pm.withdrawalShift ? '<span class="muted">※</span>' : '')
           : '<span class="muted">未設定</span>') + '</td>' +
-        '<td class="num"><strong>' + yen(d.value) + '</strong></td></tr>').join('') +
-      '</tbody></table>' + totalLine(TD + ' の支払予定額 合計', dueTotal)
-    : emptyBox('カード会社がまだ登録されていません。');
+        '<td class="num"><strong>' + yen(d.value) + '</strong></td></tr>';
+      }).join('') +
+      '</tbody></table>' + totalLine(TD + ' の支払予定額 合計', dueTotal) +
+      '<div class="muted" style="margin-top:8px">「※」は、引き落とし日が土日祝のとき次の平日にずらす設定です。</div>'
+    : emptyBox('クレジットカードがまだ登録されていません。');
 
   return '<div class="card">' + cardHead(TU + ' の支払方法別 利用額', monthPick('payUsage')) +
-    '<div class="note">「出費記録」と連動して自動集計されます。カード名をクリック／タップすると、登録したアプリ・マイページのURLを新しいタブで開きます。</div>' +
+    '<div class="note">「出費記録」と連動して自動集計されます。「※」は、引き落とし日が土日祝のとき次の平日にずらす設定です。</div>' +
     '<div class="tiles">' + tiles + '</div>' +
-    '<div class="row" style="margin-top:12px"><button class="btn btn-sm btn-primary" data-add-pm>＋ カード会社を追加</button></div>' +
+    '<div class="row" style="margin-top:12px"><button class="btn btn-sm btn-primary" data-add-pm>＋ カードを追加</button></div>' +
     totalLine(TU + ' の利用合計', total) + '</div>' +
-    '<div class="card">' + cardHead(TD + ' の支払予定額（カードの引き落とし）', monthPick('payDue')) + dueBody + '</div>' +
+    '<div class="card">' + cardHead(TD + ' の支払予定額（カードの引き落とし）', monthPick('payDue')) +
+      '<div class="note">クレジットカードのみを集計しています。デビットカードは使った時点で口座から引き落とされるため、この合計には含めていません。</div>' +
+      dueBody + '</div>' +
     '<div class="card">' + cardHead(TR + ' の利用額 構成比', monthPick('payRatio')) + barList(barItems) + '</div>';
 }
 
@@ -1206,7 +1547,6 @@ function viewBank() {
     const fg = textOn(a.color), bal = balanceOf(a.id);
     return '<div class="tile filled" style="background:' + a.color + ';color:' + fg + ';border-color:' + a.color + '">' +
       '<div class="tile-label" style="color:' + fg + '">' + esc(a.bankName) + '</div>' +
-      '<div style="font-size:12px;opacity:.9">' + esc(a.accountName) + '</div>' +
       '<div class="tile-value">' + yen(bal) + '</div>' +
       '<div style="margin-top:8px"><button class="btn btn-sm" data-edit-ac="' + a.id + '" style="background:rgba(255,255,255,.9);color:#000;border-color:transparent">編集</button></div>' +
       '</div>';
@@ -1214,7 +1554,7 @@ function viewBank() {
 
   const totalBal = state.bankAccounts.reduce((a, x) => a + balanceOf(x.id), 0);
 
-  const acOptions = state.bankAccounts.map(a => '<option value="' + a.id + '">' + esc(a.bankName + '／' + a.accountName) + '</option>').join('');
+  const acOptions = state.bankAccounts.map(a => '<option value="' + a.id + '">' + esc(a.bankName) + '</option>').join('');
   const form = '<div class="card card-form"><h2>入出金を記録する</h2><form id="txForm"><div class="row">' +
     '<div class="field"><label>口座</label><select name="accountId">' + acOptions + '</select></div>' +
     '<div class="field narrow"><label>日付</label><input type="date" name="date" value="' + defaultDateIn(MON) + '" required></div>' +
@@ -1224,18 +1564,34 @@ function viewBank() {
     '<div class="form-actions"><button type="submit" class="btn btn-primary">記録する</button></div>' +
     '</div></form></div>';
 
-  const txList = state.bankTx.filter(t => inMonth(t.date, MON))
-    .sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id);
+  /* 手入力の入出金に、デビットカードの利用分（自動）を混ぜて表示する */
+  const manual = state.bankTx.filter(t => inMonth(t.date, MON))
+    .map(t => ({ auto: false, sortId: t.id, id: t.id, date: t.date, accountId: t.accountId,
+                 type: t.type, amount: t.amount, memo: t.memo || '' }));
+  const autoRows = state.expenses.filter(e => {
+    const pm = pmById(e.pmId);
+    return pm.type === 'debit' && pm.accountId && inMonth(e.date, MON);
+  }).map(e => {
+    const pm = pmById(e.pmId);
+    return { auto: true, sortId: e.id, id: e.id, date: e.date, accountId: pm.accountId,
+             type: 'out', amount: e.amount,
+             memo: 'デビット利用：' + (e.item || '（品目なし）') + '（' + pm.name + '）' };
+  });
+  const txList = manual.concat(autoRows)
+    .sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : b.sortId - a.sortId);
+
   const rows = txList.map(t => {
     const a = acById(t.accountId);
     return '<tr><td class="muted">' + t.date.slice(5).replace('-', '/') + '</td>' +
-      '<td><span class="color-bar" style="background:' + a.color + '"></span>' + esc(a.bankName + '／' + a.accountName) + '</td>' +
+      '<td><span class="color-bar" style="background:' + a.color + '"></span>' + esc(a.bankName) + '</td>' +
       '<td><span class="chip" style="background:' + (t.type === 'in' ? '#e6f4ea' : '#fdecea') + ';color:' + (t.type === 'in' ? '#1e7e34' : '#c0392b') + '">' +
       (t.type === 'in' ? '入金' : '出金') + '</span></td>' +
-      '<td class="muted">' + esc(t.memo || '') + '</td>' +
+      '<td class="muted">' + esc(t.memo) + '</td>' +
       '<td class="num" style="color:' + (t.type === 'in' ? '#1e7e34' : '#c0392b') + '"><strong>' +
       (t.type === 'in' ? '+' : '−') + yen(t.amount) + '</strong></td>' +
-      '<td class="num"><button class="btn btn-sm btn-danger" data-del-tx="' + t.id + '">削除</button></td></tr>';
+      '<td class="num">' + (t.auto
+        ? '<span class="chip" style="background:#eef1f4;color:var(--muted);font-size:11px">自動</span>'
+        : '<button class="btn btn-sm btn-danger" data-del-tx="' + t.id + '">削除</button>') + '</td></tr>';
   }).join('');
 
   return '<div class="card"><h2>預金残高</h2><div class="tiles">' + tiles + '</div>' +
@@ -1244,7 +1600,9 @@ function viewBank() {
     form +
     '<div class="card">' + cardHead(TITLE + ' の入出金記録（' + txList.length + '件）', monthPick('bankTx')) +
     (txList.length ? '<table class="list list-tx"><thead><tr><th>日付</th><th>口座</th><th>区分</th><th>メモ</th><th class="right">金額</th><th></th></tr></thead><tbody>' +
-      rows + '</tbody></table>' : emptyBox('この月の入出金記録はまだありません。')) + '</div>';
+      rows + '</tbody></table>' : emptyBox('この月の入出金記録はまだありません。')) +
+    '<div class="muted" style="margin-top:10px">「自動」の行は、デビットカードで記録した出費です。' +
+    '変更・削除は「出費記録」の一覧から行ってください。</div></div>';
 }
 
 function bindBank() {
@@ -1308,7 +1666,8 @@ function viewShift() {
           esc(w.name + ' ' + s.start + '〜' + s.end + (conf ? '（確定）' : '（仮）')) + '">' +
           esc(s.start) + ' ' + esc(w.name) + '</button>';
       }).join('');
-      const paydayHtml = calPayroll.filter(p => Math.min(p.wp.payday, lastDay) === date.getDate() && (p.wageAll > 0 || p.transAll > 0))
+      const paydayHtml = calPayroll.filter(p => (p.wageAll > 0 || p.transAll > 0) &&
+          ymd(actualPayday(p.wp, date.getFullYear(), date.getMonth() + 1)) === ds)
         .map(p => '<span class="payday" style="background:' + p.wp.color + ';color:' + textOn(p.wp.color) + '" title="' +
           esc(p.wp.name + ' 給料日：当月分の給与') + '">💰' + esc(p.wp.name) + ' ' + yen(p.wageConf) + '</span>').join('');
       row += '<td class="' + cls + '" data-date="' + ds + '">' +
@@ -1325,20 +1684,20 @@ function viewShift() {
   const transAll  = payroll.reduce((a, p) => a + p.transAll, 0);
 
   const payrollRows = payroll.map(p =>
-    '<tr><td><span class="chip" style="background:' + p.wp.color + ';color:' + textOn(p.wp.color) + '">' + esc(p.wp.name) + '</span></td>' +
-    '<td class="num muted">' + p.wp.wage.toLocaleString('ja-JP') + '円</td>' +
-    '<td class="num muted">毎月' + p.wp.payday + '日</td>' +
-    '<td class="num">' + p.hoursConf.toFixed(1) + 'h</td>' +
-    '<td class="num"><strong>' + yen(p.wageConf) + '</strong></td>' +
-    '<td class="num muted">' + p.hoursAll.toFixed(1) + 'h</td>' +
-    '<td class="num">' + yen(p.wageAll) + '</td>' +
-    '<td class="num">' + yen(p.transConf) + '<span class="muted"> / ' + yen(p.transAll) + '</span></td>' +
+    '<tr><td data-l="勤務先"><span class="chip" style="background:' + p.wp.color + ';color:' + textOn(p.wp.color) + '">' + esc(p.wp.name) + '</span></td>' +
+    '<td class="num muted" data-l="時給">' + p.wp.wage.toLocaleString('ja-JP') + '円</td>' +
+    '<td class="num muted" data-l="給料日">毎月' + dayLabel(p.wp.payday) + (p.wp.paydayShift ? '※' : '') + '</td>' +
+    '<td class="num" data-l="確定 時間">' + p.hoursConf.toFixed(1) + 'h</td>' +
+    '<td class="num" data-l="確定 給与"><strong>' + yen(p.wageConf) + '</strong></td>' +
+    '<td class="num muted" data-l="見込 時間">' + p.hoursAll.toFixed(1) + 'h</td>' +
+    '<td class="num" data-l="見込 給与">' + yen(p.wageAll) + '</td>' +
+    '<td class="num" data-l="交通費 確定/見込">' + yen(p.transConf) + '<span class="muted"> / ' + yen(p.transAll) + '</span></td>' +
     '<td class="num"><button class="btn btn-sm" data-edit-wp="' + p.wp.id + '">編集</button></td></tr>').join('');
 
   const calCard =
     '<div class="card">' + cardHead(TC + ' のシフトカレンダー',
       monthPick('shiftCal') + '<button class="btn btn-sm btn-primary" data-add-shift>＋ シフトを追加</button>') +
-    '<div class="muted" style="margin:0 0 8px">日付のマスをクリックするとその日のシフトを追加、シフトをクリックすると編集できます。</div>' +
+    '<div class="muted" style="margin:0 0 8px">日付のマスをタップすると、その日を大きく開いて確認・追加・変更ができます。</div>' +
     '<table class="cal"><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table>' +
     '<div class="legend">' +
     '<span class="lg"><span class="box" style="background:#2f5496;border-color:#2f5496"></span>確定シフト（塗りつぶし）</span>' +
@@ -1351,7 +1710,7 @@ function viewShift() {
   const payrollCard =
     '<div class="card">' + cardHead(TP + ' の勤務先別 給与', monthPick('shiftPay')) +
     (state.workplaces.length
-      ? '<table class="list"><thead><tr><th>勤務先</th><th class="right">時給</th><th class="right">給料日</th>' +
+      ? '<table class="list list-pay"><thead><tr><th>勤務先</th><th class="right">時給</th><th class="right">給料日</th>' +
         '<th class="right">確定 時間</th><th class="right">確定 給与</th><th class="right">見込 時間</th><th class="right">見込 給与</th>' +
         '<th class="right">交通費（確定/見込）</th><th></th></tr></thead><tbody>' + payrollRows + '</tbody></table>'
       : emptyBox('勤務先がまだ登録されていません。')) +
@@ -1362,7 +1721,12 @@ function viewShift() {
     '<div class="tile"><div class="tile-label">交通費合計（確定分・別枠）</div><div class="tile-value">' + yen(transConf) + '</div></div>' +
     '<div class="tile"><div class="tile-label">交通費見込み（確定＋仮・別枠）</div><div class="tile-value">' + yen(transAll) + '</div></div>' +
     '</div>' +
-    '<div class="muted" style="margin-top:8px">※ 交通費は給与合計に含めず、別枠で集計しています。</div></div>';
+    '<div class="muted" style="margin-top:8px">※ 交通費は給与合計に含めず、別枠で集計しています。<br>' +
+    '給料日の「※」は、土日祝のときに前の平日へ前倒しする設定です。<br>' +
+    '給与は勤務先ごとの締め日で区切って集計しています。' +
+    (payroll.length ? '　集計期間 → ' + payroll.map(p =>
+      esc(p.wp.name) + '：' + p.period.from.replace(/-/g, '/') + '〜' + p.period.to.replace(/-/g, '/')).join('／') : '') +
+    '</div></div>';
 
   return calCard + payrollCard + yearlyCard();
 }
@@ -1441,12 +1805,13 @@ function viewBudget() {
     '<div class="field narrow"><label>対象月（年）</label><select name="byear">' + yearOpts(ty) + '</select></div>' +
     '<div class="field narrow"><label>対象月（月）</label><select name="bmon">' + monOpts(tm) + '</select></div>' +
     '<div class="field"><label>出費予定の内容</label><input type="text" name="item" placeholder="例：ライブ遠征費" required></div>' +
-    '<div class="field narrow"><label>予定金額（円）</label><input type="number" name="amount" min="0" step="1" required></div>' +
+    '<div class="field"><label>予定金額（円）</label><input type="text" name="amount" placeholder="例：3000 または 3000〜5000" required></div>' +
     '<div class="field narrow"><label>ジャンル（任意）</label><select name="genreId">' + genreOptions + '</select></div>' +
     '<div class="field"><label>メモ（任意）</label><input type="text" name="memo"></div>' +
     '<div class="form-actions"><button type="submit" class="btn btn-primary">追加する</button></div>' +
     '</div></form>' +
-    '<div class="muted" style="margin-top:10px">追加した予定は、対象月ごとに下へ並びます。</div></div>';
+    '<div class="muted" style="margin-top:10px">追加した予定は、対象月ごとに下へ並びます。' +
+    '金額がはっきりしないものは「3000〜5000」のように幅で入力できます。</div></div>';
 
   /* 予定がある月＋今月から6ヶ月先を対象に、月ごとのカードを作る */
   const [cy, cm] = THIS_MONTH.split('-').map(Number);
@@ -1457,7 +1822,8 @@ function viewBudget() {
   const monthCards = months.map(mm => {
     const list = state.budgets.filter(b => b.month === mm).sort((a, b) => b.id - a.id);
     if (!list.length) return '';
-    const total = list.reduce((a, b) => a + b.amount, 0);
+    const totalMin = list.reduce((a, b) => a + b.amount, 0);
+    const totalMax = list.reduce((a, b) => a + budMax(b), 0);
     const actual = monthExpenses(mm).reduce((a, e) => a + e.amount, 0);
     const label = monthLabelOf(mm);
     const rows = list.map(b => {
@@ -1465,31 +1831,35 @@ function viewBudget() {
       return '<tr><td>' + (g ? '<span class="color-bar" style="background:' + g.color + '"></span>' : '') + esc(b.item) + '</td>' +
         '<td>' + (g ? '<span class="chip" style="background:' + g.color + ';color:' + textOn(g.color) + '">' + esc(g.name) + '</span>' : '<span class="muted">—</span>') + '</td>' +
         '<td class="muted">' + esc(b.memo || '') + '</td>' +
-        '<td class="num"><strong>' + yen(b.amount) + '</strong></td>' +
+        '<td class="num"><strong>' + yenRange(b.amount, b.amountMax) + '</strong></td>' +
         '<td class="num"><button class="btn btn-sm btn-danger" data-del-bud="' + b.id + '">削除</button></td></tr>';
     }).join('');
     return '<div class="card"><h2>' + label + ' の出費予定一覧（' + list.length + '件）' +
       (mm < THIS_MONTH ? '<span class="muted" style="font-weight:400"> ／ 過去の月</span>' : '') + '</h2>' +
       '<table class="list list-bud"><thead><tr><th>内容</th><th>ジャンル</th><th>メモ</th><th class="right">予定金額</th><th></th></tr></thead><tbody>' +
-      rows + '</tbody></table>' + totalLine(label + ' の予算合計', total) +
-      (actual > 0 ? '<div class="muted" style="margin-top:10px">参考：この月の実際の出費は ' + yen(actual) +
-        '（予算との差：<strong style="color:' + (actual > total ? 'var(--sun)' : '#1e7e34') + '">' +
-        (actual > total ? '+' : '−') + yen(Math.abs(actual - total)) + '</strong>）</div>' : '') +
+      rows + '</tbody></table>' + totalLineText(label + ' の予算合計', yenRange(totalMin, totalMax)) +
+      (actual > 0 ? '<div class="muted" style="margin-top:10px">参考：この月の実際の出費は ' + yen(actual) + '（' +
+        (actual > totalMax
+          ? '予算より <strong style="color:var(--sun)">' + yen(actual - totalMax) + ' 多い</strong>'
+          : actual < totalMin
+            ? '予算より <strong style="color:#1e7e34">' + yen(totalMin - actual) + ' 少ない</strong>'
+            : '<strong style="color:#1e7e34">予算の範囲内</strong>') + '）</div>' : '') +
       '</div>';
   }).join('');
 
-  const summary = months.map(mm => ({
-    month: mm,
-    total: state.budgets.filter(b => b.month === mm).reduce((a, b) => a + b.amount, 0)
-  }));
-  const grand = summary.reduce((a, s) => a + s.total, 0);
+  const summary = months.map(mm => {
+    const l = state.budgets.filter(b => b.month === mm);
+    return { month: mm, min: l.reduce((a, b) => a + b.amount, 0), max: l.reduce((a, b) => a + budMax(b), 0) };
+  });
+  const grandMin = summary.reduce((a, s) => a + s.min, 0);
+  const grandMax = summary.reduce((a, s) => a + s.max, 0);
 
   const summaryCard = '<div class="card"><h2>月ごとの予算合計</h2>' +
     '<table class="list"><thead><tr><th>対象月</th><th class="right">予算合計</th></tr></thead><tbody>' +
     summary.map(s => '<tr>' +
       '<td>' + monthLabelOf(s.month) + (s.month === THIS_MONTH ? '<span class="muted">（今月）</span>' : '') + '</td>' +
-      '<td class="num">' + (s.total ? yen(s.total) : '<span class="muted">—</span>') + '</td></tr>').join('') +
-    '</tbody></table>' + totalLine('登録済みの予算 総合計', grand) + '</div>';
+      '<td class="num">' + (s.max ? yenRange(s.min, s.max) : '<span class="muted">—</span>') + '</td></tr>').join('') +
+    '</tbody></table>' + totalLineText('登録済みの予算 総合計', yenRange(grandMin, grandMax)) + '</div>';
 
   return form + (monthCards || '<div class="card">' + emptyBox('出費予定はまだ登録されていません。') + '</div>') + summaryCard;
 }
@@ -1500,13 +1870,16 @@ function bindBudget() {
   f.addEventListener('submit', ev => {
     ev.preventDefault();
     const fd = new FormData(f);
+    const rng = parseAmountRange(fd.get('amount'));
+    if (!rng) { alert('予定金額の書き方をご確認ください。「3000」または「3000〜5000」のように入力します。'); return; }
     const target = fd.get('byear') + '-' + pad2(Number(fd.get('bmon')));
     monthOf.budgetTarget = target;
     state.budgets.push({
       id: uid(),
       month: target,
       item: fd.get('item'),
-      amount: Number(fd.get('amount')),
+      amount: rng.min,
+      amountMax: rng.max,
       genreId: fd.get('genreId') ? Number(fd.get('genreId')) : null,
       memo: fd.get('memo') || ''
     });
@@ -1522,25 +1895,45 @@ function defaultDateIn(month) {
   return month === THIS_MONTH ? ymd(new Date()) : month + '-01';
 }
 function totalLine(label, value) {
-  return '<div class="total-line"><span class="tl-label">' + esc(label) + '</span><span class="tl-value">' + yen(value) + '</span></div>';
+  return totalLineText(label, yen(value));
 }
+function totalLineText(label, text) {
+  return '<div class="total-line"><span class="tl-label">' + esc(label) + '</span><span class="tl-value">' + text + '</span></div>';
+}
+/** 「3000」「3000〜5000」などを {min,max} に変換する。おかしければ null */
+function parseAmountRange(str) {
+  const t = String(str == null ? '' : str)
+    .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/[,，\s円￥¥]/g, '');
+  if (!t) return null;
+  const parts = t.split(/[〜~～ー―–—\-]+/).filter(x => x !== '');
+  if (!parts.length || parts.length > 2) return null;
+  const nums = parts.map(Number);
+  if (nums.some(n => !isFinite(n) || n < 0)) return null;
+  const a = nums[0], b = nums.length > 1 ? nums[1] : nums[0];
+  return { min: Math.min(a, b), max: Math.max(a, b) };
+}
+/** 単一なら「¥3,000」、範囲なら「¥3,000〜¥5,000」 */
+function yenRange(min, max) {
+  return (max != null && max !== min) ? yen(min) + '〜' + yen(max) : yen(min);
+}
+const budMax = b => (b.amountMax != null ? b.amountMax : b.amount);
 
 /* bar: セクション見出しの下にまとめての年・月セレクターを置くか（シフト・給与のみ） */
 const SECTIONS = [
   { key: 'expense', label: '出費記録',     desc: '使ったお金をその場で記録し、ジャンル別に集計します', fn: viewExpense },
-  { key: 'payment', label: '支払方法',     desc: '現金・カード会社ごとの利用額を集計します',           fn: viewPayment },
+  { key: 'payment', label: '収支記録',     desc: '現金・カードごとの利用額と支払予定をまとめます',      fn: viewPayment },
   { key: 'bank',    label: '銀行口座',     desc: '口座の入出金を記録し、預金残高を確認します',         fn: viewBank },
   { key: 'shift',   label: 'シフト・給与', desc: 'カレンダーでシフトを管理し、給与を計算します',       fn: viewShift,
     bar: 'shift', hint: 'カレンダー・勤務先別の給与・年の給与合計をまとめて切り替えます' },
-  { key: 'budget',  label: '予算',         desc: '翌月以降の出費予定を立てて予算を管理します',         fn: viewBudget }
+  { key: 'budget',  label: '出費予定',     desc: '翌月以降の出費の予定を立てて管理します',            fn: viewBudget }
 ];
 
 function sectionBlock(sec, showHeader) {
   return '<section class="sec" id="sec-' + sec.key + '">' +
     (showHeader
       ? '<div class="sec-head"><div><div class="sec-title">' + esc(sec.label) + '</div>' +
-        '<div class="sec-desc">' + esc(sec.desc) + '</div></div>' +
-        '<button class="btn btn-sm" data-only="' + sec.key + '">この項目だけ表示</button></div>'
+        '<div class="sec-desc">' + esc(sec.desc) + '</div></div></div>'
       : '') +
     (sec.bar ? monthBar(sec.bar, sec.hint) : '') + sec.fn() + '</section>';
 }
@@ -1616,7 +2009,7 @@ document.addEventListener('click', ev => {
   const sid = hit('data-shift');
   if (sid) { ev.stopPropagation(); editShift(state.shifts.find(s => s.id === +sid)); return; }
   const cell = t.closest('td[data-date]');
-  if (cell) { editShift(null, cell.dataset.date); return; }
+  if (cell) { dayModal(cell.dataset.date); return; }
 
   const url = hit('data-open-url');
   if (url) {
