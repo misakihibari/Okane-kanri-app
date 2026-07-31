@@ -394,7 +394,7 @@ a.extlink{color:inherit;text-decoration:none;}
   table.list-bud td:nth-child(5){order:6;margin-left:auto;}
 }
 
-/* ---------- 時刻の10分単位セレクト ---------- */
+/* ---------- 時刻の5分単位セレクト ---------- */
 .time-pick{display:flex;align-items:center;gap:6px;}
 .time-pick select{flex:1;min-width:0;padding:8px 6px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);}
 .tp-sep{font-weight:700;color:var(--muted);}
@@ -967,7 +967,7 @@ function formModal(opts) {
     if (f.type === 'time10') {
       const v = String(f.value || '09:00');
       const hh = v.slice(0, 2), mi = v.slice(3, 5);
-      const mins = ['00', '10', '20', '30', '40', '50'];
+      const mins = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
       if (mins.indexOf(mi) === -1 && /^\d\d$/.test(mi)) { mins.push(mi); mins.sort(); }
       const hOpts = Array.from({ length: 24 }, (_, i) => pad2(i))
         .map(h => '<option value="' + h + '"' + (h === hh ? ' selected' : '') + '>' + h + '</option>').join('');
