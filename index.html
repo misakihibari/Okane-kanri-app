@@ -706,12 +706,25 @@ function holidayName(date) {
 /** 「25」→「25日」、「end」→「月末」 */
 function dayLabel(v) { return v === 'end' ? '月末' : (v == null ? '—' : v + '日'); }
 
+/** 給料日の表示文（「毎月25日」「毎月 月末」「翌月末」） */
+function paydayText(v) {
+  if (v === 'next-end') return '翌月末';
+  if (v === 'end') return '毎月 月末';
+  return v == null ? '—' : '毎月' + v + '日';
+}
+/** 給料日が翌月にずれ込む設定かどうか */
+function isNextMonthPayday(wp) { return wp.payday === 'next-end'; }
+
 /** 1〜31日＋月末 の選択肢 */
 function dayOpts31() {
   const o = [];
   for (let i = 1; i <= 31; i++) o.push({ value: String(i), label: i + '日' });
   o.push({ value: 'end', label: '月末' });
   return o;
+}
+/** 給料日用の選択肢。締め月の翌月末に支給されるケースにも対応 */
+function paydayOpts() {
+  return dayOpts31().concat([{ value: 'next-end', label: '翌月末' }]);
 }
 
 /** その月の給料に対応する勤務期間を、勤務先の締め日で区切って返す */
@@ -747,9 +760,13 @@ function actualWithdrawalDate(pm, year, month) {
 /** その月の実際の給料日を返す。
  *  勤務先の設定が「前倒し」なら、給料日が土日祝のとき直前の平日まで戻す */
 function actualPayday(wp, year, month) {
-  const lastDay = new Date(year, month, 0).getDate();
-  const dayNum = wp.payday === 'end' ? lastDay : Math.min(Number(wp.payday) || 25, lastDay);
-  let d = new Date(year, month - 1, dayNum);
+  let y = year, m = month;
+  /* 「翌月末」は、締めた月の次の月の末日に支給される */
+  if (wp.payday === 'next-end') { m += 1; if (m > 12) { m = 1; y += 1; } }
+  const lastDay = new Date(y, m, 0).getDate();
+  const dayNum = (wp.payday === 'end' || wp.payday === 'next-end')
+    ? lastDay : Math.min(Number(wp.payday) || 25, lastDay);
+  let d = new Date(y, m - 1, dayNum);
   if (wp.paydayShift) {
     let guard = 0;
     while ((d.getDay() === 0 || d.getDay() === 6 || holidayName(d)) && guard++ < 20) {
@@ -1174,7 +1191,8 @@ function editWorkplace(w) {
       { key: 'cutoff',    label: '締め日', type: 'select',
         value: String(w && w.cutoff != null ? w.cutoff : 'end'), options: dayOpts31() },
       { key: 'payday',    label: '給料日', type: 'select', required: true,
-        value: String(w && w.payday != null ? w.payday : 25), options: dayOpts31() },
+        value: String(w && w.payday != null ? w.payday : 25), options: paydayOpts(),
+        hint: '「翌月末」は、締めた月の翌月の末日に支給される場合に選びます' },
       { key: 'paydayShift', label: '給料日が土日祝のとき', type: 'select',
         value: (w && !w.paydayShift) ? '0' : '1',
         options: [{ value: '1', label: '前の平日に前倒しする' }, { value: '0', label: 'そのままにする' }],
@@ -1653,7 +1671,23 @@ function viewShift() {
   for (let d = 1; d <= lastDay; d++) cells.push(new Date(y, m - 1, d));
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const calPayroll = payrollOfMonth(MC);   // カレンダーの給料日表示用
+  /* カレンダーの給料日マーク。「翌月末」の勤務先は前月分の給与がこの月に支給される */
+  const calPayroll = payrollOfMonth(MC);
+  const prevPayroll = payrollOfMonth(prevMonthOf(MC));
+  const paydayMarks = state.workplaces.map(w => {
+    const next = isNextMonthPayday(w);
+    const srcMonth = next ? prevMonthOf(MC) : MC;
+    const pr = (next ? prevPayroll : calPayroll).find(x => x.wp.id === w.id);
+    const [sy, sm] = srcMonth.split('-').map(Number);
+    return {
+      wp: w,
+      date: ymd(actualPayday(w, sy, sm)),
+      label: monthLabelOf(srcMonth),
+      wageConf: pr ? pr.wageConf : 0,
+      wageAll:  pr ? pr.wageAll  : 0,
+      transAll: pr ? pr.transAll : 0
+    };
+  });
   const payroll    = payrollOfMonth(MP);   // 勤務先別 給与の表用
   const todayStr = ymd(new Date());
 
@@ -1679,10 +1713,9 @@ function viewShift() {
           esc(w.name + ' ' + s.start + '〜' + s.end + (conf ? '（確定）' : '（仮）')) + '">' +
           esc(s.start) + ' ' + esc(w.name) + '</button>';
       }).join('');
-      const paydayHtml = calPayroll.filter(p => (p.wageAll > 0 || p.transAll > 0) &&
-          ymd(actualPayday(p.wp, date.getFullYear(), date.getMonth() + 1)) === ds)
+      const paydayHtml = paydayMarks.filter(p => p.date === ds && (p.wageAll > 0 || p.transAll > 0))
         .map(p => '<span class="payday" style="background:' + p.wp.color + ';color:' + textOn(p.wp.color) + '" title="' +
-          esc(p.wp.name + ' 給料日：当月分の給与') + '">💰' + esc(p.wp.name) + ' ' + yen(p.wageConf) + '</span>').join('');
+          esc(p.wp.name + ' 給料日：' + p.label + '分の給与') + '">💰' + esc(p.wp.name) + ' ' + yen(p.wageConf) + '</span>').join('');
       row += '<td class="' + cls + '" data-date="' + ds + '">' +
         '<div class="daynum">' + date.getDate() + '</div>' +
         (hol ? '<span class="holname">' + esc(hol) + '</span>' : '') +
@@ -1699,7 +1732,7 @@ function viewShift() {
   const payrollRows = payroll.map(p =>
     '<tr><td data-l="勤務先"><span class="chip" style="background:' + p.wp.color + ';color:' + textOn(p.wp.color) + '">' + esc(p.wp.name) + '</span></td>' +
     '<td class="num muted" data-l="時給">' + p.wp.wage.toLocaleString('ja-JP') + '円</td>' +
-    '<td class="num muted" data-l="給料日">毎月' + dayLabel(p.wp.payday) + (p.wp.paydayShift ? '※' : '') + '</td>' +
+    '<td class="num muted" data-l="給料日">' + paydayText(p.wp.payday) + (p.wp.paydayShift ? '※' : '') + '</td>' +
     '<td class="num" data-l="確定 時間">' + p.hoursConf.toFixed(1) + 'h</td>' +
     '<td class="num" data-l="確定 給与"><strong>' + yen(p.wageConf) + '</strong></td>' +
     '<td class="num muted" data-l="見込 時間">' + p.hoursAll.toFixed(1) + 'h</td>' +
