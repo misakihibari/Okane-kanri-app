@@ -825,6 +825,20 @@ function payrollOfMonth(month) {
   });
   return res;
 }
+/** その月に「振り込まれる」給与を勤務先ごとに集計する。
+ *  給料日が翌月の勤務先は、前月に働いた分がこの月の給与になる */
+function payrollPaidIn(month) {
+  const prevM = prevMonthOf(month);
+  const cur = payrollOfMonth(month);
+  const prv = payrollOfMonth(prevM);
+  return state.workplaces.map(w => {
+    const next = isNextMonthPayday(w);
+    const src = next ? prevM : month;
+    const r = (next ? prv : cur).find(x => x.wp.id === w.id);
+    return Object.assign({}, r, { srcMonth: src });
+  });
+}
+
 /** その口座を引き落とし先にしているデビットカードでの出費合計 */
 function debitOutOf(accountId, untilDate) {
   const ids = state.paymentMethods
@@ -1676,23 +1690,18 @@ function viewShift() {
   while (cells.length % 7 !== 0) cells.push(null);
 
   /* カレンダーの給料日マーク。「翌月末」の勤務先は前月分の給与がこの月に支給される */
-  const calPayroll = payrollOfMonth(MC);
-  const prevPayroll = payrollOfMonth(prevMonthOf(MC));
-  const paydayMarks = state.workplaces.map(w => {
-    const next = isNextMonthPayday(w);
-    const srcMonth = next ? prevMonthOf(MC) : MC;
-    const pr = (next ? prevPayroll : calPayroll).find(x => x.wp.id === w.id);
-    const [sy, sm] = srcMonth.split('-').map(Number);
+  const paydayMarks = payrollPaidIn(MC).map(p => {
+    const [sy, sm] = p.srcMonth.split('-').map(Number);
     return {
-      wp: w,
-      date: ymd(actualPayday(w, sy, sm)),
-      label: monthLabelOf(srcMonth),
-      wageConf: pr ? pr.wageConf : 0,
-      wageAll:  pr ? pr.wageAll  : 0,
-      transAll: pr ? pr.transAll : 0
+      wp: p.wp,
+      date: ymd(actualPayday(p.wp, sy, sm)),
+      label: monthLabelOf(p.srcMonth),
+      wageConf: p.wageConf || 0,
+      wageAll:  p.wageAll  || 0,
+      transAll: p.transAll || 0
     };
   });
-  const payroll    = payrollOfMonth(MP);   // 勤務先別 給与の表用
+  const payroll    = payrollPaidIn(MP);    // 勤務先別 給与の表用（その月に振り込まれる分）
   const todayStr = ymd(new Date());
 
   const headNames = ['日', '月', '火', '水', '木', '金', '土'];
@@ -1754,11 +1763,11 @@ function viewShift() {
     '<span class="lg"><span class="box" style="background:#fff;border-color:#2f5496"></span>仮シフト（外枠のみ）</span>' +
     '<span class="lg"><span style="color:var(--sat);font-weight:700">■</span>土曜日</span>' +
     '<span class="lg"><span style="color:var(--sun);font-weight:700">■</span>日曜日・祝日</span>' +
-    '<span class="lg">💰 給料日（当月分の確定給与）</span>' +
+    '<span class="lg">💰 給料日（その日に振り込まれる確定給与）</span>' +
     '</div></div>';
 
   const payrollCard =
-    '<div class="card">' + cardHead(TP + ' の勤務先別 給与', monthPick('shiftPay')) +
+    '<div class="card">' + cardHead(TP + ' に振り込まれる給与（勤務先別）', monthPick('shiftPay')) +
     (state.workplaces.length
       ? '<table class="list list-pay"><thead><tr><th>勤務先</th><th class="right">時給</th><th class="right">給料日</th>' +
         '<th class="right">確定 時間</th><th class="right">確定 給与</th><th class="right">見込 時間</th><th class="right">見込 給与</th>' +
@@ -1773,8 +1782,8 @@ function viewShift() {
     '</div>' +
     '<div class="muted" style="margin-top:8px">※ 交通費は給与合計に含めず、別枠で集計しています。<br>' +
     '給料日の「※」は、土日祝のときに前の平日へ前倒しする設定です。<br>' +
-    '給与は勤務先ごとの締め日で区切って集計しています。' +
-    (payroll.length ? '　集計期間 → ' + payroll.map(p =>
+    'その月に振り込まれる金額を表示しています（給料日が翌月の勤務先は、前月に働いた分がここに入ります）。' +
+    (payroll.length ? '<br>対象の勤務期間 → ' + payroll.map(p =>
       esc(p.wp.name) + '：' + p.period.from.replace(/-/g, '/') + '〜' + p.period.to.replace(/-/g, '/')).join('／') : '') +
     '</div></div>';
 
@@ -1787,7 +1796,7 @@ function yearlyCard() {
   const months = [];
   for (let mm = 1; mm <= 12; mm++) {
     const key = yr + '-' + pad2(mm);
-    const pr = payrollOfMonth(key);
+    const pr = payrollPaidIn(key);
     months.push({
       mm, key, pr,
       wage:  pr.reduce((a, p) => a + p.wageConf, 0),
@@ -1824,7 +1833,7 @@ function yearlyCard() {
     '<td class="num"><strong>' + yen(yearTrans) + '</strong></td></tr>';
 
   return '<div class="card">' + cardHead(yr + '年 の給与合計', yearPick()) +
-    '<div class="note">確定シフトをもとにした集計です。交通費は給与に含めず別列で表示しています。月をクリックすると、その月の「勤務先別 給与」に切り替わります。</div>' +
+    '<div class="note">確定シフトをもとに、その月に振り込まれる金額で集計しています。交通費は給与に含めず別列で表示しています。月をクリックすると、その月の「振り込まれる給与」に切り替わります。</div>' +
     (state.workplaces.length
       ? '<div style="overflow-x:auto"><table class="list"><thead>' + head + '</thead><tbody>' + body + foot + '</tbody></table></div>' +
         '<div class="tiles" style="margin-top:16px">' +
