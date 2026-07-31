@@ -706,14 +706,14 @@ function holidayName(date) {
 /** 「25」→「25日」、「end」→「月末」 */
 function dayLabel(v) { return v === 'end' ? '月末' : (v == null ? '—' : v + '日'); }
 
-/** 給料日の表示文（「毎月25日」「毎月 月末」「翌月末」） */
+/** 給料日の表示文（「翌月25日」「当月末」「翌月末」） */
 function paydayText(v) {
   if (v === 'next-end') return '翌月末';
-  if (v === 'end') return '毎月 月末';
-  return v == null ? '—' : '毎月' + v + '日';
+  if (v === 'end') return '当月末';
+  return v == null ? '—' : '翌月' + v + '日';
 }
-/** 給料日が翌月にずれ込む設定かどうか */
-function isNextMonthPayday(wp) { return wp.payday === 'next-end'; }
+/** 給料日が締め月の翌月になる設定かどうか（「当月末」だけが締め月と同じ月） */
+function isNextMonthPayday(wp) { return wp.payday !== 'end'; }
 
 /** 1〜31日＋月末 の選択肢 */
 function dayOpts31() {
@@ -722,9 +722,13 @@ function dayOpts31() {
   o.push({ value: 'end', label: '月末' });
   return o;
 }
-/** 給料日用の選択肢。締め月の翌月末に支給されるケースにも対応 */
+/** 給料日用の選択肢。「当月末」以外はすべて締め月の翌月に支給される */
 function paydayOpts() {
-  return dayOpts31().concat([{ value: 'next-end', label: '翌月末' }]);
+  const o = [];
+  for (let i = 1; i <= 31; i++) o.push({ value: String(i), label: '翌月' + i + '日' });
+  o.push({ value: 'end', label: '当月末' });
+  o.push({ value: 'next-end', label: '翌月末' });
+  return o;
 }
 
 /** その月の給料に対応する勤務期間を、勤務先の締め日で区切って返す */
@@ -761,8 +765,8 @@ function actualWithdrawalDate(pm, year, month) {
  *  勤務先の設定が「前倒し」なら、給料日が土日祝のとき直前の平日まで戻す */
 function actualPayday(wp, year, month) {
   let y = year, m = month;
-  /* 「翌月末」は、締めた月の次の月の末日に支給される */
-  if (wp.payday === 'next-end') { m += 1; if (m > 12) { m = 1; y += 1; } }
+  /* 「当月末」以外は、締めた月の翌月に支給される */
+  if (wp.payday !== 'end') { m += 1; if (m > 12) { m = 1; y += 1; } }
   const lastDay = new Date(y, m, 0).getDate();
   const dayNum = (wp.payday === 'end' || wp.payday === 'next-end')
     ? lastDay : Math.min(Number(wp.payday) || 25, lastDay);
@@ -1192,7 +1196,7 @@ function editWorkplace(w) {
         value: String(w && w.cutoff != null ? w.cutoff : 'end'), options: dayOpts31() },
       { key: 'payday',    label: '給料日', type: 'select', required: true,
         value: String(w && w.payday != null ? w.payday : 25), options: paydayOpts(),
-        hint: '「翌月末」は、締めた月の翌月の末日に支給される場合に選びます' },
+        hint: '締めた月のうちに支給される場合だけ「当月末」を選びます' },
       { key: 'paydayShift', label: '給料日が土日祝のとき', type: 'select',
         value: (w && !w.paydayShift) ? '0' : '1',
         options: [{ value: '1', label: '前の平日に前倒しする' }, { value: '0', label: 'そのままにする' }],
