@@ -623,17 +623,24 @@ const genreById = id => state.genres.find(g => g.id === id) || { name: '(未分�
 const pmById    = id => state.paymentMethods.find(p => p.id === id) || { name: '(不明)', color: '#cccccc', type: 'cash', url: '' };
 const wpById    = id => state.workplaces.find(w => w.id === id) || { name: '(不明)', color: '#cccccc', wage: 0, payday: 25, transport: 0 };
 
-/** その月のカード・現金の予算を取り出す（未設定は0） */
+/** その月のクレジット・デビット・現金の予算を取り出す（未設定は0） */
 function monthBudget(mm) {
   const b = (state.monthlyBudget || {})[mm] || {};
-  return { card: Number(b.card) || 0, cash: Number(b.cash) || 0 };
+  return {
+    card:  Number(b.card)  || 0,
+    debit: Number(b.debit) || 0,
+    cash:  Number(b.cash)  || 0
+  };
 }
-function setMonthBudget(mm, card, cash) {
+function setMonthBudget(mm, card, debit, cash) {
   if (!state.monthlyBudget) state.monthlyBudget = {};
-  state.monthlyBudget[mm] = { card: card, cash: cash };
+  state.monthlyBudget[mm] = { card: card, debit: debit, cash: cash };
 }
-/** 現金払いかどうか（現金以外はすべてカード扱い） */
-function isCashPayment(pmId) { return pmById(pmId).type === 'cash'; }
+/** 支払方法の種別（'card' / 'debit' / 'cash'）を返す */
+function payKindOf(pmId) {
+  const t = pmById(pmId).type;
+  return t === 'card' ? 'card' : t === 'debit' ? 'debit' : 'cash';
+}
 const acById    = id => state.bankAccounts.find(a => a.id === id) || { bankName: '(不明)', color: '#cccccc', initialBalance: 0 };
 
 /* ============================================================
@@ -1343,9 +1350,11 @@ function viewExpense() {
 
   /* 月の予算（カード・現金）と、そこから引いた残り */
   const MB = monthOf.expBudget, TB = monthLabelOf(MB);
-  const budList  = monthExpenses(MB);
-  const usedCash = budList.filter(e => isCashPayment(e.pmId)).reduce((a, e) => a + e.amount, 0);
-  const usedCard = budList.reduce((a, e) => a + e.amount, 0) - usedCash;
+  const budList   = monthExpenses(MB);
+  const sumKind   = k => budList.filter(e => payKindOf(e.pmId) === k).reduce((a, e) => a + e.amount, 0);
+  const usedCard  = sumKind('card');
+  const usedDebit = sumKind('debit');
+  const usedCash  = sumKind('cash');
   const bud = monthBudget(MB);
 
   const genreOptions = state.genres.map(g => '<option value="' + g.id + '">' + esc(g.name) + '</option>').join('') +
@@ -1399,18 +1408,21 @@ function viewExpense() {
 
   const budgetCard =
     '<div class="card">' + cardHead(TB + ' の予算', monthPick('expBudget')) +
-    budBar('カード', bud.card, usedCard, '#2D9CDB') +
-    budBar('現金',   bud.cash, usedCash, '#6FCF97') +
-    budBar('合計',   bud.card + bud.cash, usedCard + usedCash, '#2f5496', true) +
+    budBar('クレジットカード', bud.card,  usedCard,  '#2D9CDB') +
+    budBar('デビットカード',   bud.debit, usedDebit, '#BB6BD9') +
+    budBar('現金',             bud.cash,  usedCash,  '#6FCF97') +
+    budBar('合計', bud.card + bud.debit + bud.cash,
+                   usedCard + usedDebit + usedCash, '#2f5496', true) +
     '<form id="mbudForm"><div class="row" style="margin-top:12px">' +
-    '<div class="field"><label>カードの予算（円）</label>' +
+    '<div class="field"><label>クレジットカードの予算（円）</label>' +
     '<input type="number" name="card" min="0" step="1" value="' + (bud.card || '') + '" placeholder="0"></div>' +
+    '<div class="field"><label>デビットカードの予算（円）</label>' +
+    '<input type="number" name="debit" min="0" step="1" value="' + (bud.debit || '') + '" placeholder="0"></div>' +
     '<div class="field"><label>現金の予算（円）</label>' +
     '<input type="number" name="cash" min="0" step="1" value="' + (bud.cash || '') + '" placeholder="0"></div>' +
     '<div class="form-actions"><button type="submit" class="btn btn-primary">予算を保存</button></div>' +
     '</div></form>' +
-    '<div class="muted" style="margin-top:10px">出費を記録すると、その月の予算から自動的に差し引かれます。' +
-    'デビットカードを含むカード払いは「カード」に集計されます。</div></div>';
+    '<div class="muted" style="margin-top:10px">出費を記録すると、支払方法に応じてその月の予算から自動的に差し引かれます。</div></div>';
 
   const genreCard =
     '<div class="card">' + cardHead(TG + ' のジャンル別 合計金額', monthPick('expGenre')) +
@@ -1431,7 +1443,8 @@ function bindExpense() {
   if (mb) mb.addEventListener('submit', ev => {
     ev.preventDefault();
     const fd = new FormData(mb);
-    setMonthBudget(monthOf.expBudget, Number(fd.get('card') || 0), Number(fd.get('cash') || 0));
+    setMonthBudget(monthOf.expBudget,
+      Number(fd.get('card') || 0), Number(fd.get('debit') || 0), Number(fd.get('cash') || 0));
     commit();
   });
   const f = $('#expForm');
