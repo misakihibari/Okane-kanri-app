@@ -492,6 +492,7 @@ a.extlink{color:inherit;text-decoration:none;}
 
 <nav class="tabs" id="tabs">
   <button class="tab active" data-view="all">すべて</button>
+  <button class="tab" data-view="savings">貯金</button>
   <button class="tab" data-view="expense">出費記録</button>
   <button class="tab" data-view="payment">収支記録</button>
   <button class="tab" data-view="bank">銀行口座</button>
@@ -577,7 +578,9 @@ function defaultState() {
     workplaces: [],
     shifts: [],
     budgets: [],
-    monthlyBudget: {}
+    monthlyBudget: {},
+    savingsGoals: [],
+    savings: []
   };
 }
 
@@ -850,13 +853,35 @@ function debitOutOf(accountId, untilDate) {
     .reduce((a, e) => a + e.amount, 0);
 }
 
-/** 口座残高（指定日まで／全期間）。デビットカードの利用分も差し引く */
+/** その口座に貯金した合計 */
+function savingsInOf(accountId, untilDate) {
+  return (state.savings || [])
+    .filter(v => v.accountId === accountId && (!untilDate || v.date <= untilDate))
+    .reduce((a, v) => a + v.amount, 0);
+}
+
+/** 口座残高（指定日まで／全期間）。デビットカードの利用分を引き、貯金分を足す */
 function balanceOf(accountId, untilDate) {
   const ac = acById(accountId);
   const byTx = state.bankTx
     .filter(t => t.accountId === accountId && (!untilDate || t.date <= untilDate))
     .reduce((a, t) => a + (t.type === 'in' ? t.amount : -t.amount), ac.initialBalance || 0);
-  return byTx - debitOutOf(accountId, untilDate);
+  return byTx - debitOutOf(accountId, untilDate) + savingsInOf(accountId, untilDate);
+}
+
+/* ---------- 貯金 ---------- */
+
+/** 目標の期限を文にする（年だけ／月だけ／両方／未設定） */
+function goalDeadline(g) {
+  const y = g.targetYear, m = g.targetMonth;
+  if (y && m) return y + '年' + m + '月までに';
+  if (y) return y + '年までに';
+  if (m) return m + '月までに';
+  return '期限なし';
+}
+/** その目標にこれまで貯金した合計 */
+function savedFor(goalId) {
+  return (state.savings || []).filter(v => v.goalId === goalId).reduce((a, v) => a + v.amount, 0);
 }
 
 /* ============================================================
@@ -1192,6 +1217,11 @@ function editAccount(a) {
         alert('この口座は「' + used.map(pm => pm.name).join('、') + '」の引き落とし先に設定されているため削除できません。\n先に収支記録でカード側の設定を変更してください。');
         return;
       }
+      const gls = (state.savingsGoals || []).filter(g => g.accountId === a.id);
+      if (gls.length) {
+        alert('この口座は貯金の目標「' + gls.map(g => g.title).join('、') + '」の貯金先に設定されているため削除できません。\n先に貯金で目標側の設定を変更してください。');
+        return;
+      }
       state.bankTx = state.bankTx.filter(t => t.accountId !== a.id);
       state.bankAccounts = state.bankAccounts.filter(x => x.id !== a.id);
       commit();
@@ -1230,6 +1260,155 @@ function editWorkplace(w) {
       commit();
     } : null,
     deleteLabel: 'シフトごと削除'
+  });
+}
+
+/** 貯金の目標を追加・編集する */
+function editGoal(g) {
+  const thisYear = new Date().getFullYear();
+  const yearOptions = [{ value: '', label: '（指定しない）' }];
+  for (let i = 0; i <= 10; i++) yearOptions.push({ value: String(thisYear + i), label: (thisYear + i) + '年' });
+  const monthOptions = [{ value: '', label: '（指定しない）' }];
+  for (let i = 1; i <= 12; i++) monthOptions.push({ value: String(i), label: i + '月' });
+
+  formModal({
+    title: g ? '貯金の目標を編集' : '貯金の目標を追加',
+    fields: [
+      { key: 'title', label: 'タイトル', type: 'text', value: g ? g.title : '', required: true,
+        placeholder: '例：旅行の資金' },
+      { key: 'targetAmount', label: '目標金額（円）', type: 'number', value: g ? g.targetAmount : 0,
+        min: 0, step: '1', required: true },
+      { key: 'targetYear',  label: '目標の年', type: 'select',
+        value: String(g && g.targetYear ? g.targetYear : ''), options: yearOptions },
+      { key: 'targetMonth', label: '目標の月', type: 'select',
+        value: String(g && g.targetMonth ? g.targetMonth : ''), options: monthOptions,
+        hint: '年だけ・月だけの指定でもかまいません' },
+      { key: 'accountId', label: '貯金先の銀行口座', type: 'select',
+        value: String(g && g.accountId ? g.accountId : ''),
+        options: [{ value: '', label: state.bankAccounts.length ? '（選択してください）' : '（口座が未登録です）' }]
+          .concat(state.bankAccounts.map(a => ({ value: String(a.id), label: a.bankName }))),
+        hint: '貯金を記録すると、この口座の預金残高が増えます' },
+      { key: 'color', label: '表示色', type: 'color',
+        value: g ? g.color : nextColor((state.savingsGoals || []).map(x => x.color)) }
+    ],
+    onSubmit: d => {
+      if (!d.accountId) { alert('貯金先の銀行口座を選んでください。'); return; }
+      const data = {
+        title: d.title,
+        targetAmount: Number(d.targetAmount) || 0,
+        targetYear:  d.targetYear  ? Number(d.targetYear)  : null,
+        targetMonth: d.targetMonth ? Number(d.targetMonth) : null,
+        accountId: Number(d.accountId),
+        color: d.color
+      };
+      if (g) Object.assign(g, data);
+      else {
+        if (!state.savingsGoals) state.savingsGoals = [];
+        state.savingsGoals.push(Object.assign({ id: uid() }, data));
+      }
+      commit();
+    },
+    onDelete: g ? () => {
+      const n = (state.savings || []).filter(v => v.goalId === g.id).length;
+      if (n && !confirm('この目標に記録した貯金 ' + n + ' 件も一緒に削除されます。よろしいですか？')) return;
+      state.savings = (state.savings || []).filter(v => v.goalId !== g.id);
+      state.savingsGoals = state.savingsGoals.filter(x => x.id !== g.id);
+      commit();
+    } : null,
+    deleteLabel: '目標ごと削除'
+  });
+}
+
+/* ============================================================
+   ビュー⓪ 貯金
+   ============================================================ */
+function viewSavings() {
+  const goals = state.savingsGoals || [];
+
+  if (!state.bankAccounts.length) {
+    return '<div class="card"><h2>貯金</h2>' +
+      emptyBox('先に「銀行口座」で貯金先の口座を登録してください。') +
+      '<div class="center"><button class="btn btn-primary" data-add-ac>＋ 銀行口座を追加</button></div></div>';
+  }
+  if (!goals.length) {
+    return '<div class="card"><h2>貯金の目標</h2>' +
+      emptyBox('目標がまだ登録されていません。') +
+      '<div class="center"><button class="btn btn-primary" data-add-goal>＋ 目標を追加</button></div></div>';
+  }
+
+  /* 目標ごとの進み具合 */
+  const cards = goals.map(g => {
+    const saved = savedFor(g.id);
+    const rest  = Math.max(0, g.targetAmount - saved);
+    const done  = saved >= g.targetAmount && g.targetAmount > 0;
+    const pct   = g.targetAmount > 0 ? Math.min(100, Math.round(saved / g.targetAmount * 100)) : 0;
+    const ac    = acById(g.accountId);
+    return '<div class="bud-row">' +
+      '<div class="bud-head">' +
+      '<span class="bud-name"><span class="color-bar" style="background:' + g.color + '"></span>' + esc(g.title) + '</span>' +
+      '<span class="bud-rest">' + (done
+        ? '<strong style="color:#1e7e34">目標達成</strong>'
+        : 'あと <strong style="color:var(--accent)">' + yen(rest) + '</strong>') + '</span></div>' +
+      '<div class="bud-bar"><span style="width:' + pct + '%;background:' + (done ? '#1e7e34' : g.color) + '"></span></div>' +
+      '<div class="bud-sub muted">' + esc(goalDeadline(g)) + '　目標 ' + yen(g.targetAmount) +
+        '　貯金済み ' + yen(saved) + '（' + pct + '%）　貯金先 ' + esc(ac.bankName) +
+        '　<button class="btn btn-sm" data-edit-goal="' + g.id + '">編集</button></div>' +
+      '</div>';
+  }).join('');
+
+  const goalCard = '<div class="card"><h2>貯金の目標</h2>' + cards +
+    '<div class="row" style="margin-top:12px"><button class="btn btn-sm btn-primary" data-add-goal>＋ 目標を追加</button></div></div>';
+
+  /* 貯金の記録フォーム */
+  const goalOptions = goals.map(g => '<option value="' + g.id + '">' + esc(g.title) + '</option>').join('');
+  const form = '<div class="card card-form"><h2>貯金を記録する</h2><form id="savForm"><div class="row">' +
+    '<div class="field"><label>どの目標に貯金しますか</label><select name="goalId">' + goalOptions + '</select></div>' +
+    '<div class="field"><label>日付</label><input type="date" name="date" value="' + ymd(new Date()) + '" required></div>' +
+    '<div class="field"><label>金額（円）</label><input type="number" name="amount" min="0" step="1" required></div>' +
+    '<div class="field"><label>メモ（任意）</label><input type="text" name="memo" placeholder="例：今月分"></div>' +
+    '<div class="form-actions"><button type="submit" class="btn btn-primary">記録する</button></div>' +
+    '</div></form>' +
+    '<div class="muted" style="margin-top:10px">記録すると、その目標の貯金先に設定した口座の預金残高が増えます。</div></div>';
+
+  /* 貯金の履歴 */
+  const list = (state.savings || []).slice().sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id);
+  const rows = list.map(v => {
+    const g = goals.find(x => x.id === v.goalId) || { title: '(削除済み)', color: '#cccccc' };
+    return '<tr><td class="muted">' + v.date.slice(5).replace('-', '/') + '</td>' +
+      '<td><span class="color-bar" style="background:' + g.color + '"></span>' + esc(g.title) + '</td>' +
+      '<td class="muted">' + esc(acById(v.accountId).bankName) + '</td>' +
+      '<td class="muted">' + esc(v.memo || '') + '</td>' +
+      '<td class="num" style="color:#1e7e34"><strong>+' + yen(v.amount) + '</strong></td>' +
+      '<td class="num"><button class="btn btn-sm btn-danger" data-del-sav="' + v.id + '">削除</button></td></tr>';
+  }).join('');
+
+  const totalSaved = list.reduce((a, v) => a + v.amount, 0);
+  const historyCard = '<div class="card"><h2>貯金の記録（' + list.length + '件）</h2>' +
+    (list.length
+      ? '<table class="list list-tx"><thead><tr><th>日付</th><th>目標</th><th>貯金先</th><th>メモ</th><th class="right">金額</th><th></th></tr></thead><tbody>' +
+        rows + '</tbody></table>' + totalLine('貯金の合計', totalSaved)
+      : emptyBox('貯金の記録はまだありません。')) + '</div>';
+
+  return goalCard + form + historyCard;
+}
+
+function bindSavings() {
+  const f = $('#savForm');
+  if (!f) return;
+  f.addEventListener('submit', ev => {
+    ev.preventDefault();
+    const fd = new FormData(f);
+    const goalId = Number(fd.get('goalId'));
+    const goal = (state.savingsGoals || []).find(g => g.id === goalId);
+    if (!goal) { alert('目標を選んでください。'); return; }
+    const amount = Number(fd.get('amount') || 0);
+    if (amount <= 0) { alert('金額を入力してください。'); return; }
+    if (!state.savings) state.savings = [];
+    state.savings.push({
+      id: uid(), goalId: goalId, accountId: goal.accountId,
+      date: fd.get('date'), amount: amount, memo: fd.get('memo') || ''
+    });
+    commit();
   });
 }
 
@@ -1980,6 +2159,7 @@ const budMax = b => (b.amountMax != null ? b.amountMax : b.amount);
 
 /* bar: セクション見出しの下にまとめての年・月セレクターを置くか（シフト・給与のみ） */
 const SECTIONS = [
+  { key: 'savings', label: '貯金',         desc: '目標を決めて貯金し、達成までの残りを確認します',      fn: viewSavings },
   { key: 'expense', label: '出費記録',     desc: '使ったお金をその場で記録し、ジャンル別に集計します', fn: viewExpense },
   { key: 'payment', label: '収支記録',     desc: '現金・カードごとの利用額と支払予定をまとめます',      fn: viewPayment },
   { key: 'bank',    label: '銀行口座',     desc: '口座の入出金を記録し、預金残高を確認します',         fn: viewBank },
@@ -2017,7 +2197,7 @@ function render(keepScroll) {
       sectionBlock(sec, false);
   }
 
-  bindExpense(); bindBank(); bindBudget();
+  bindSavings(); bindExpense(); bindBank(); bindBudget();
   if (y !== null) window.scrollTo(0, y);
 }
 
@@ -2059,6 +2239,8 @@ document.addEventListener('click', ev => {
   const eg = hit('data-edit-genre');  if (eg) { editGenre(state.genres.find(g => g.id === +eg)); return; }
   if (t.closest('[data-add-pm]'))     { editPayment(null); return; }
   const ep = hit('data-edit-pm');     if (ep) { ev.stopPropagation(); editPayment(state.paymentMethods.find(p => p.id === +ep)); return; }
+  if (t.closest('[data-add-goal]'))   { editGoal(null); return; }
+  const egl = hit('data-edit-goal');  if (egl) { editGoal((state.savingsGoals || []).find(g => g.id === +egl)); return; }
   if (t.closest('[data-add-ac]'))     { editAccount(null); return; }
   const ea = hit('data-edit-ac');     if (ea) { editAccount(state.bankAccounts.find(a => a.id === +ea)); return; }
   if (t.closest('[data-add-wp]'))     { editWorkplace(null); return; }
@@ -2084,6 +2266,8 @@ document.addEventListener('click', ev => {
   if (dt) { if (confirm('この入出金記録を削除しますか？')) { state.bankTx = state.bankTx.filter(x => x.id !== +dt); commit(); } return; }
   const db = hit('data-del-bud');
   if (db) { if (confirm('この出費予定を削除しますか？')) { state.budgets = state.budgets.filter(x => x.id !== +db); commit(); } return; }
+  const ds = hit('data-del-sav');
+  if (ds) { if (confirm('この貯金の記録を削除しますか？　口座の残高も元に戻ります。')) { state.savings = (state.savings || []).filter(x => x.id !== +ds); commit(); } return; }
 });
 
 document.addEventListener('change', ev => {
