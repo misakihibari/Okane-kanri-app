@@ -401,6 +401,25 @@ a.extlink{color:inherit;text-decoration:none;}
 .time-pick select{flex:1;min-width:0;padding:8px 6px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);}
 .tp-sep{font-weight:700;color:var(--muted);}
 
+/* ---------- 出費一覧の絞り込みタブ ---------- */
+.filter-wrap{margin-bottom:14px;}
+.filter-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px;}
+.filter-label{flex:0 0 100%;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:1px;}
+.fchip{
+  display:inline-flex;align-items:center;gap:5px;
+  border:1px solid var(--border);background:#fff;color:var(--text);
+  border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;line-height:1.3;
+}
+.fchip .color-bar{width:4px;height:12px;margin-right:1px;vertical-align:0;}
+.fchip .fc-num{font-size:11.5px;opacity:.7;font-variant-numeric:tabular-nums;}
+.fchip:hover{border-color:var(--accent);color:var(--accent);}
+.fchip.on{background:var(--accent);border-color:var(--accent);color:var(--text-inv);}
+.fchip.on .fc-num{opacity:.9;}
+@media(max-width:600px){
+  .fchip{padding:5px 9px;font-size:12px;}
+  .fchip .fc-num{font-size:11px;}
+}
+
 /* ---------- 月の予算バー ---------- */
 .bud-row{margin:12px 0;}
 .bud-total{margin-top:14px;padding-top:14px;border-top:2px solid var(--border);}
@@ -890,6 +909,10 @@ function savedFor(goalId) {
    4. 画面状態
    ============================================================ */
 let currentView = 'all';
+
+/* 出費一覧の絞り込み（null＝すべて） */
+let expFilterPm = null;
+let expFilterGenre = null;
 
 /* 表示する月は「表」ごとに独立して切り替えられる */
 const THIS_MONTH = ym(new Date());
@@ -1562,8 +1585,51 @@ function viewExpense() {
     .filter(i => i.value > 0)
     .sort((a, b) => b.value - a.value);
 
-  const list = monthExpenses(ML);
+  /* 出費一覧は支払方法とジャンルで絞り込める。
+     片方のタブの金額は、もう片方の絞り込みを反映した額を出す */
+  const monthList = monthExpenses(ML);
+  if (expFilterPm !== null && !state.paymentMethods.some(x => x.id === expFilterPm)) expFilterPm = null;
+  if (expFilterGenre !== null && !state.genres.some(x => x.id === expFilterGenre)) expFilterGenre = null;
+
+  const forPmTabs    = monthList.filter(e => expFilterGenre === null || e.genreId === expFilterGenre);
+  const forGenreTabs = monthList.filter(e => expFilterPm === null || e.pmId === expFilterPm);
+  const pmTotals     = sumBy(forPmTabs,    e => e.pmId,    e => e.amount);
+  const genreTotals  = sumBy(forGenreTabs, e => e.genreId, e => e.amount);
+
+  const list = monthList.filter(e =>
+    (expFilterPm === null || e.pmId === expFilterPm) &&
+    (expFilterGenre === null || e.genreId === expFilterGenre));
   const total = list.reduce((a, e) => a + e.amount, 0);
+
+  const fchip = (on, attr, value, color, label, amount) =>
+    '<button class="fchip' + (on ? ' on' : '') + '" data-' + attr + '="' + value + '">' +
+    (color ? '<span class="color-bar" style="background:' + color + '"></span>' : '') +
+    esc(label) + '<span class="fc-num">' + yen(amount) + '</span></button>';
+
+  const pmTabs =
+    fchip(expFilterPm === null, 'fpm', 'all', '', 'すべて',
+          forPmTabs.reduce((a, e) => a + e.amount, 0)) +
+    state.paymentMethods
+      .filter(x => (pmTotals.get(x.id) || 0) > 0 || expFilterPm === x.id)
+      .map(x => fchip(expFilterPm === x.id, 'fpm', x.id, x.color, x.name, pmTotals.get(x.id) || 0)).join('');
+
+  const genreTabs =
+    fchip(expFilterGenre === null, 'fg', 'all', '', 'すべて',
+          forGenreTabs.reduce((a, e) => a + e.amount, 0)) +
+    state.genres
+      .filter(x => (genreTotals.get(x.id) || 0) > 0 || expFilterGenre === x.id)
+      .map(x => fchip(expFilterGenre === x.id, 'fg', x.id, x.color, x.name, genreTotals.get(x.id) || 0)).join('');
+
+  const filterTabs =
+    '<div class="filter-wrap">' +
+    '<div class="filter-row"><span class="filter-label">支払方法で絞り込む</span>' + pmTabs + '</div>' +
+    '<div class="filter-row"><span class="filter-label">ジャンルで絞り込む</span>' + genreTabs + '</div>' +
+    '</div>';
+
+  const picked = [];
+  if (expFilterPm !== null)    picked.push(pmById(expFilterPm).name);
+  if (expFilterGenre !== null) picked.push(genreById(expFilterGenre).name);
+  const pickedLabel = picked.length ? '（' + picked.join(' × ') + '）' : '';
 
   /* 月の予算（カード・現金）と、そこから引いた残り */
   const MB = monthOf.expBudget, TB = monthLabelOf(MB);
@@ -1602,9 +1668,12 @@ function viewExpense() {
   }).join('');
 
   const listCard =
-    '<div class="card">' + cardHead(TL + ' の出費一覧（' + list.length + '件）', monthPick('expList')) +
-    (list.length ? '<table class="list list-exp"><thead><tr><th>日付</th><th>品目</th><th>ジャンル</th><th>支払方法</th><th>メモ</th><th class="right">金額</th><th></th></tr></thead><tbody>' +
-      rows + '</tbody></table>' + totalLine(TL + ' の出費合計', total) : emptyBox('この月の出費記録はまだありません。')) +
+    '<div class="card">' + cardHead(TL + ' の出費一覧' + pickedLabel + '（' + list.length + '件）', monthPick('expList')) +
+    (monthList.length ? filterTabs : '') +
+    (list.length
+      ? '<table class="list list-exp"><thead><tr><th>日付</th><th>品目</th><th>ジャンル</th><th>支払方法</th><th>メモ</th><th class="right">金額</th><th></th></tr></thead><tbody>' +
+        rows + '</tbody></table>' + totalLine(TL + ' の出費合計' + pickedLabel, total)
+      : emptyBox(monthList.length ? 'この条件に合う出費記録はありません。' : 'この月の出費記録はまだありません。')) +
     '</div>';
 
   const budBar = (label, budget, used, color, isTotal) => {
@@ -2261,6 +2330,11 @@ document.addEventListener('click', ev => {
     if (!w) location.href = url;
     return;
   }
+
+  const fpm = hit('data-fpm');
+  if (fpm) { expFilterPm = fpm === 'all' ? null : Number(fpm); render(true); return; }
+  const fg = hit('data-fg');
+  if (fg) { expFilterGenre = fg === 'all' ? null : Number(fg); render(true); return; }
 
   const de = hit('data-del-exp');
   if (de) { if (confirm('この出費記録を削除しますか？')) { state.expenses = state.expenses.filter(x => x.id !== +de); commit(); } return; }
