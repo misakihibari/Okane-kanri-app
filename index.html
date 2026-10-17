@@ -401,6 +401,38 @@ a.extlink{color:inherit;text-decoration:none;}
 .time-pick select{flex:1;min-width:0;padding:8px 6px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);}
 .tp-sep{font-weight:700;color:var(--muted);}
 
+/* ---------- 繰り返し出費（自動記録）の別枠 ---------- */
+.auto-block{
+  border:1.5px dashed var(--accent);border-radius:10px;
+  padding:8px 10px 2px;margin-bottom:14px;background:#f5f8fd;
+}
+.auto-head{
+  display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+  font-size:12px;font-weight:700;color:var(--accent);margin-bottom:2px;
+}
+.auto-sum{font-variant-numeric:tabular-nums;font-size:13px;}
+.auto-block table.list td{border-bottom-color:#dde4ef;}
+
+/* 繰り返し出費の一覧をスマホで折り返す */
+@media(max-width:600px){
+  table.list-rec,table.list-rec thead,table.list-rec tbody,
+  table.list-rec tr,table.list-rec td{display:block;}
+  table.list-rec thead{display:none;}
+  table.list-rec tr{
+    display:flex;flex-wrap:wrap;align-items:center;
+    gap:3px 8px;padding:10px 2px;border-bottom:1px solid #eef1f4;
+  }
+  table.list-rec tr:last-child{border-bottom:none;}
+  table.list-rec td{padding:0;border:none;}
+  table.list-rec tr::before{content:"";order:3;flex:0 0 100%;height:0;}
+  table.list-rec td:nth-child(1){order:1;font-weight:600;}
+  table.list-rec td:nth-child(5){order:2;margin-left:auto;font-size:15px;}
+  table.list-rec td:nth-child(2){order:4;}
+  table.list-rec td:nth-child(3){order:5;}
+  table.list-rec td:nth-child(6){order:6;margin-left:auto;}
+  table.list-rec td:nth-child(4){order:7;flex:0 0 100%;font-size:11.5px;}
+}
+
 /* ---------- 出費一覧の絞り込みタブ ---------- */
 .filter-wrap{margin-bottom:14px;}
 .filter-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px;}
@@ -601,7 +633,8 @@ function defaultState() {
     budgets: [],
     monthlyBudget: {},
     savingsGoals: [],
-    savings: []
+    savings: [],
+    recurring: []
   };
 }
 
@@ -809,9 +842,56 @@ function actualPayday(wp, year, month) {
    ============================================================ */
 const inMonth = (dateStr, month) => typeof dateStr === 'string' && dateStr.slice(0, 7) === month;
 
+/** 'YYYY-MM' の1ヶ月後 */
+function nextMonthOf(month) {
+  const [y, m] = month.split('-').map(Number);
+  return ym(new Date(y, m, 1));
+}
+
+/** その月に有効な繰り返し出費 */
+function activeRecurring(month) {
+  return (state.recurring || []).filter(r =>
+    r.startMonth && r.startMonth <= month && (!r.endMonth || month <= r.endMonth));
+}
+
+/** 繰り返し出費を、その月の1日付けの出費として展開する（自動記録） */
+function recurringExpensesOf(month) {
+  return activeRecurring(month).map(r => ({
+    id: 'r' + r.id + '@' + month,
+    recurringId: r.id,
+    auto: true,
+    date: month + '-01',
+    item: r.item,
+    amount: r.amount,
+    genreId: r.genreId,
+    pmId: r.pmId,
+    memo: r.memo || ''
+  }));
+}
+
+/** 指定した支払方法の繰り返し出費を、untilDate（既定は今日）まで積み上げた合計 */
+function recurringSumUntil(pmIds, untilDate) {
+  const limit = untilDate || ymd(new Date());
+  let total = 0;
+  (state.recurring || []).forEach(r => {
+    if (!r.startMonth || pmIds.indexOf(r.pmId) === -1) return;
+    let m = r.startMonth, guard = 0;
+    while (guard++ < 600) {
+      if (r.endMonth && m > r.endMonth) break;
+      if ((m + '-01') > limit) break;
+      total += r.amount;
+      m = nextMonthOf(m);
+    }
+  });
+  return total;
+}
+
+const sortKeyOf = x => (typeof x.id === 'number' ? x.id : -1);
+
 function monthExpenses(month) {
-  return state.expenses.filter(e => inMonth(e.date, month))
-                       .sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id);
+  return recurringExpensesOf(month)
+    .concat(state.expenses.filter(e => inMonth(e.date, month)))
+    .sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : sortKeyOf(b) - sortKeyOf(a));
 }
 function sumBy(list, keyFn, valFn) {
   const m = new Map();
@@ -871,7 +951,8 @@ function debitOutOf(accountId, untilDate) {
   if (!ids.length) return 0;
   return state.expenses
     .filter(e => ids.indexOf(e.pmId) !== -1 && (!untilDate || e.date <= untilDate))
-    .reduce((a, e) => a + e.amount, 0);
+    .reduce((a, e) => a + e.amount, 0)
+    + recurringSumUntil(ids, untilDate);
 }
 
 /** その口座に貯金した合計 */
@@ -956,6 +1037,7 @@ function yearRange() {
   state.bankTx.forEach(x => ys.add(Number(x.date.slice(0, 4))));
   state.shifts.forEach(x => ys.add(Number(x.date.slice(0, 4))));
   state.budgets.forEach(x => ys.add(Number(x.month.slice(0, 4))));
+  (state.recurring || []).forEach(x => { if (x.startMonth) ys.add(Number(x.startMonth.slice(0, 4))); });
   Object.keys(monthOf).forEach(k => ys.add(Number(monthOf[k].slice(0, 4))));
   ys.add(payrollYear);
   return Array.from(ys).sort((a, b) => a - b);
@@ -1049,6 +1131,22 @@ function formModal(opts) {
         '<label class="cc-pick">自由な色を選ぶ<input type="color" data-custom-for="' + f.key + '" value="' + esc(cur) + '"></label>' +
         '</div></div>';
     }
+    if (f.type === 'ym') {
+      const v = f.value || '';
+      const yv = v ? v.slice(0, 4) : '';
+      const mv = v ? String(Number(v.slice(5, 7))) : '';
+      const now = new Date().getFullYear();
+      let yOpts = f.optional ? '<option value=""' + (yv === '' ? ' selected' : '') + '>指定しない</option>' : '';
+      for (let i = now - 5; i <= now + 5; i++)
+        yOpts += '<option value="' + i + '"' + (String(i) === yv ? ' selected' : '') + '>' + i + '年</option>';
+      let mOpts = f.optional ? '<option value=""' + (mv === '' ? ' selected' : '') + '>指定しない</option>' : '';
+      for (let i = 1; i <= 12; i++)
+        mOpts += '<option value="' + i + '"' + (String(i) === mv ? ' selected' : '') + '>' + i + '月</option>';
+      return '<div class="field"><label>' + esc(f.label) + '</label><div class="time-pick">' +
+        '<select name="' + f.key + '__y">' + yOpts + '</select>' +
+        '<select name="' + f.key + '__m">' + mOpts + '</select></div>' +
+        (f.hint ? '<span class="muted">' + esc(f.hint) + '</span>' : '') + '</div>';
+    }
     if (f.type === 'time10') {
       const v = String(f.value || '09:00');
       const hh = v.slice(0, 2), mi = v.slice(3, 5);
@@ -1127,6 +1225,10 @@ function formModal(opts) {
     fields.forEach(f => {
       if (f.type === 'color') data[f.key] = colorState[f.key];
       else if (f.type === 'time10') data[f.key] = (fd.get(f.key + '__h') || '00') + ':' + (fd.get(f.key + '__m') || '00');
+      else if (f.type === 'ym') {
+        const yy = fd.get(f.key + '__y'), mm = fd.get(f.key + '__m');
+        data[f.key] = (yy && mm) ? yy + '-' + pad2(Number(mm)) : null;
+      }
       else if (f.type === 'number') data[f.key] = Number(fd.get(f.key) || 0);
       else data[f.key] = fd.get(f.key);
     });
@@ -1154,7 +1256,8 @@ function editGenre(g) {
       commit();
     },
     onDelete: g ? () => {
-      if (state.expenses.some(e => e.genreId === g.id)) { alert('このジャンルを使用している出費記録があるため削除できません。'); return; }
+      if (state.expenses.some(e => e.genreId === g.id) || (state.recurring || []).some(r => r.genreId === g.id)) {
+        alert('このジャンルを使用している出費記録があるため削除できません。'); return; }
       state.genres = state.genres.filter(x => x.id !== g.id); commit();
     } : null
   });
@@ -1216,7 +1319,8 @@ function editPayment(p) {
       commit();
     },
     onDelete: (p && !isCash) ? () => {
-      if (state.expenses.some(e => e.pmId === p.id)) { alert('この支払方法を使用している出費記録があるため削除できません。'); return; }
+      if (state.expenses.some(e => e.pmId === p.id) || (state.recurring || []).some(r => r.pmId === p.id)) {
+        alert('この支払方法を使用している出費記録があるため削除できません。'); return; }
       state.paymentMethods = state.paymentMethods.filter(x => x.id !== p.id); commit();
     } : null
   });
@@ -1285,6 +1389,53 @@ function editWorkplace(w) {
       commit();
     } : null,
     deleteLabel: 'シフトごと削除'
+  });
+}
+
+/** 毎月の繰り返し出費（自動記録）を追加・編集する */
+function editRecurring(r) {
+  if (!state.genres.length || !state.paymentMethods.length) {
+    alert('先にジャンルと支払方法を用意してください。'); return;
+  }
+  formModal({
+    title: r ? '繰り返し出費を編集' : '繰り返し出費を追加',
+    fields: [
+      { key: 'item', label: '品目', type: 'text', value: r ? r.item : '', required: true,
+        placeholder: '例：サブスク代' },
+      { key: 'amount', label: '毎月の金額（円）', type: 'number', value: r ? r.amount : 0,
+        min: 0, step: '1', required: true },
+      { key: 'genreId', label: 'ジャンル', type: 'select',
+        value: String(r ? r.genreId : state.genres[0].id),
+        options: state.genres.map(g => ({ value: String(g.id), label: g.name })) },
+      { key: 'pmId', label: '支払方法', type: 'select',
+        value: String(r ? r.pmId : state.paymentMethods[0].id),
+        options: state.paymentMethods.map(x => ({ value: String(x.id), label: x.name })) },
+      { key: 'startMonth', label: '開始月', type: 'ym', value: r ? r.startMonth : THIS_MONTH,
+        hint: 'この月から毎月1日に自動で記録されます' },
+      { key: 'endMonth', label: '終了月（任意）', type: 'ym', value: r ? r.endMonth : null, optional: true,
+        hint: '指定しなければ、やめるまでずっと続きます' },
+      { key: 'memo', label: 'メモ（任意）', type: 'text', value: r ? (r.memo || '') : '' }
+    ],
+    onSubmit: d => {
+      if (!d.startMonth) { alert('開始月を選んでください。'); return; }
+      if (d.endMonth && d.endMonth < d.startMonth) { alert('終了月は開始月より後にしてください。'); return; }
+      const data = {
+        item: d.item, amount: Number(d.amount) || 0,
+        genreId: Number(d.genreId), pmId: Number(d.pmId),
+        startMonth: d.startMonth, endMonth: d.endMonth || null, memo: d.memo || ''
+      };
+      if (r) Object.assign(r, data);
+      else {
+        if (!state.recurring) state.recurring = [];
+        state.recurring.push(Object.assign({ id: uid() }, data));
+      }
+      commit();
+    },
+    onDelete: r ? () => {
+      state.recurring = (state.recurring || []).filter(x => x.id !== r.id);
+      commit();
+    } : null,
+    deleteLabel: '繰り返しをやめる'
   });
 }
 
@@ -1652,11 +1803,14 @@ function viewExpense() {
     '<div class="field narrow"><label>金額（円）</label><input type="number" name="amount" min="0" step="1" placeholder="0" required></div>' +
     '<div class="field narrow"><label>ジャンル</label><select name="genreId" id="genreSel">' + genreOptions + '</select></div>' +
     '<div class="field narrow"><label>支払方法</label><select name="pmId">' + pmOptions + '</select></div>' +
+    '<div class="field narrow"><label>繰り返し</label><select name="repeat">' +
+    '<option value="no">なし（1回だけ）</option>' +
+    '<option value="monthly">毎月（自動で記録）</option></select></div>' +
     '<div class="field"><label>メモ（任意）</label><input type="text" name="memo" placeholder=""></div>' +
     '<div class="form-actions"><button type="submit" class="btn btn-primary">記録する</button></div>' +
     '</div></form></div>';
 
-  const rows = list.map(e => {
+  const expRow = (e, last) => {
     const g = genreById(e.genreId), p = pmById(e.pmId);
     return '<tr><td class="muted" style="white-space:nowrap">' + e.date.slice(5).replace('-', '/') + '</td>' +
       '<td><span class="color-bar" style="background:' + g.color + '"></span>' + esc(e.item) + '</td>' +
@@ -1664,17 +1818,64 @@ function viewExpense() {
       '<td><span class="chip" style="background:' + p.color + ';color:' + textOn(p.color) + '">' + esc(p.name) + '</span></td>' +
       '<td class="muted">' + esc(e.memo || '') + '</td>' +
       '<td class="num"><strong>' + yen(e.amount) + '</strong></td>' +
-      '<td class="num"><button class="btn btn-sm btn-danger" data-del-exp="' + e.id + '">削除</button></td></tr>';
-  }).join('');
+      '<td class="num">' + last + '</td></tr>';
+  };
+
+  const autoItems = list.filter(e => e.auto);
+  const realItems = list.filter(e => !e.auto);
+  const autoTotal = autoItems.reduce((a, e) => a + e.amount, 0);
+
+  const rows = realItems.map(e =>
+    expRow(e, '<button class="btn btn-sm btn-danger" data-del-exp="' + e.id + '">削除</button>')).join('');
+
+  const autoBlock = autoItems.length
+    ? '<div class="auto-block">' +
+      '<div class="auto-head"><span>毎月の繰り返し（毎月1日に自動記録）</span>' +
+      '<span class="auto-sum">' + yen(autoTotal) + '</span></div>' +
+      '<table class="list list-exp"><tbody>' +
+      autoItems.map(e =>
+        expRow(e, '<button class="btn btn-sm" data-edit-rec="' + e.recurringId + '">編集</button>')).join('') +
+      '</tbody></table></div>'
+    : '';
 
   const listCard =
     '<div class="card">' + cardHead(TL + ' の出費一覧' + pickedLabel + '（' + list.length + '件）', monthPick('expList')) +
     (monthList.length ? filterTabs : '') +
     (list.length
-      ? '<table class="list list-exp"><thead><tr><th>日付</th><th>品目</th><th>ジャンル</th><th>支払方法</th><th>メモ</th><th class="right">金額</th><th></th></tr></thead><tbody>' +
-        rows + '</tbody></table>' + totalLine(TL + ' の出費合計' + pickedLabel, total)
+      ? autoBlock +
+        (realItems.length
+          ? '<table class="list list-exp"><thead><tr><th>日付</th><th>品目</th><th>ジャンル</th><th>支払方法</th><th>メモ</th><th class="right">金額</th><th></th></tr></thead><tbody>' +
+            rows + '</tbody></table>'
+          : '') +
+        totalLine(TL + ' の出費合計' + pickedLabel, total)
       : emptyBox(monthList.length ? 'この条件に合う出費記録はありません。' : 'この月の出費記録はまだありません。')) +
     '</div>';
+
+  /* ---- 繰り返し出費の管理 ---- */
+  const recAll = state.recurring || [];
+  const recActive = activeRecurring(ML);
+  const recRows = recAll.map(r => {
+    const g = genreById(r.genreId), pm = pmById(r.pmId);
+    const on = recActive.some(x => x.id === r.id);
+    return '<tr' + (on ? '' : ' style="opacity:.5"') + '>' +
+      '<td data-l="品目"><span class="color-bar" style="background:' + g.color + '"></span>' + esc(r.item) + '</td>' +
+      '<td data-l="ジャンル"><span class="chip" style="background:' + g.color + ';color:' + textOn(g.color) + '">' + esc(g.name) + '</span></td>' +
+      '<td data-l="支払方法"><span class="chip" style="background:' + pm.color + ';color:' + textOn(pm.color) + '">' + esc(pm.name) + '</span></td>' +
+      '<td class="muted" data-l="期間">' + (r.startMonth ? monthLabelOf(r.startMonth) : '—') + '〜' +
+        (r.endMonth ? monthLabelOf(r.endMonth) : '') + (on ? '' : '（対象外）') + '</td>' +
+      '<td class="num" data-l="毎月"><strong>' + yen(r.amount) + '</strong></td>' +
+      '<td class="num"><button class="btn btn-sm" data-edit-rec="' + r.id + '">編集</button></td></tr>';
+  }).join('');
+
+  const recCard = '<div class="card">' +
+    '<div class="card-head"><h2>毎月の繰り返し出費（自動記録）</h2>' +
+    '<button class="btn btn-sm btn-primary" data-add-rec style="margin-left:auto">＋ 繰り返しを追加</button></div>' +
+    (recAll.length
+      ? '<table class="list list-rec"><thead><tr><th>品目</th><th>ジャンル</th><th>支払方法</th><th>期間</th><th class="right">毎月</th><th></th></tr></thead><tbody>' +
+        recRows + '</tbody></table>' +
+        totalLine(TL + ' に自動記録される合計', recActive.reduce((a, r) => a + r.amount, 0))
+      : emptyBox('繰り返しの出費はまだありません。出費を記録するときに「繰り返し：毎月」を選ぶと、ここに登録されます。')) +
+    '<div class="muted" style="margin-top:10px">登録すると毎月1日付けで自動的に記録され、支払方法ごとの利用額・予算・合計にも反映されます。</div></div>';
 
   const budBar = (label, budget, used, color, isTotal) => {
     const over = budget > 0 && used > budget;
@@ -1721,7 +1922,7 @@ function viewExpense() {
       '<span class="color-bar" style="background:' + g.color + ';height:12px;vertical-align:-2px"></span>' + esc(g.name) + '</button>').join('') +
     '<button class="btn btn-sm btn-primary" data-add-genre>＋ ジャンル追加</button></div></div>';
 
-  return form + budgetCard + genreCard + listCard;
+  return form + recCard + budgetCard + genreCard + listCard;
 }
 
 function bindExpense() {
@@ -1742,6 +1943,22 @@ function bindExpense() {
     ev.preventDefault();
     const fd = new FormData(f);
     if (fd.get('genreId') === '__new') return;
+    /* 「毎月」を選んだときは1回きりの記録ではなく、繰り返しの設定として登録する */
+    if (fd.get('repeat') === 'monthly') {
+      if (!state.recurring) state.recurring = [];
+      state.recurring.push({
+        id: uid(),
+        item: fd.get('item'),
+        amount: Number(fd.get('amount')),
+        genreId: Number(fd.get('genreId')),
+        pmId: Number(fd.get('pmId')),
+        memo: fd.get('memo') || '',
+        startMonth: String(fd.get('date')).slice(0, 7),
+        endMonth: null
+      });
+      commit();
+      return;
+    }
     state.expenses.push({
       id: uid(),
       date: fd.get('date'),
@@ -1801,7 +2018,7 @@ function viewPayment() {
   const cards = state.paymentMethods.filter(p => p.type === 'card');
   const dueItems = cards.map(p => ({
     pm: p,
-    value: state.expenses.filter(e => e.pmId === p.id && inMonth(e.date, prevM)).reduce((a, e) => a + e.amount, 0)
+    value: monthExpenses(prevM).filter(e => e.pmId === p.id).reduce((a, e) => a + e.amount, 0)
   }));
   const dueTotal = dueItems.reduce((a, d) => a + d.value, 0);
 
@@ -2330,6 +2547,10 @@ document.addEventListener('click', ev => {
     if (!w) location.href = url;
     return;
   }
+
+  if (t.closest('[data-add-rec]')) { editRecurring(null); return; }
+  const erec = hit('data-edit-rec');
+  if (erec) { editRecurring((state.recurring || []).find(x => x.id === +erec)); return; }
 
   const fpm = hit('data-fpm');
   if (fpm) { expFilterPm = fpm === 'all' ? null : Number(fpm); render(true); return; }
