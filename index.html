@@ -991,9 +991,9 @@ function savedFor(goalId) {
    ============================================================ */
 let currentView = 'all';
 
-/* 出費一覧の絞り込み（null＝すべて） */
-let expFilterPm = null;
-let expFilterGenre = null;
+/* 出費一覧の絞り込み（空配列＝すべて／複数選択できる） */
+let expFilterPm = [];
+let expFilterGenre = [];
 
 /* 表示する月は「表」ごとに独立して切り替えられる */
 const THIS_MONTH = ym(new Date());
@@ -1739,17 +1739,19 @@ function viewExpense() {
   /* 出費一覧は支払方法とジャンルで絞り込める。
      片方のタブの金額は、もう片方の絞り込みを反映した額を出す */
   const monthList = monthExpenses(ML);
-  if (expFilterPm !== null && !state.paymentMethods.some(x => x.id === expFilterPm)) expFilterPm = null;
-  if (expFilterGenre !== null && !state.genres.some(x => x.id === expFilterGenre)) expFilterGenre = null;
+  /* 消えた項目が選ばれたままにならないよう整理する */
+  expFilterPm    = expFilterPm.filter(id => state.paymentMethods.some(x => x.id === id));
+  expFilterGenre = expFilterGenre.filter(id => state.genres.some(x => x.id === id));
 
-  const forPmTabs    = monthList.filter(e => expFilterGenre === null || e.genreId === expFilterGenre);
-  const forGenreTabs = monthList.filter(e => expFilterPm === null || e.pmId === expFilterPm);
+  const hitPm    = e => !expFilterPm.length    || expFilterPm.indexOf(e.pmId) !== -1;
+  const hitGenre = e => !expFilterGenre.length || expFilterGenre.indexOf(e.genreId) !== -1;
+
+  const forPmTabs    = monthList.filter(hitGenre);
+  const forGenreTabs = monthList.filter(hitPm);
   const pmTotals     = sumBy(forPmTabs,    e => e.pmId,    e => e.amount);
   const genreTotals  = sumBy(forGenreTabs, e => e.genreId, e => e.amount);
 
-  const list = monthList.filter(e =>
-    (expFilterPm === null || e.pmId === expFilterPm) &&
-    (expFilterGenre === null || e.genreId === expFilterGenre));
+  const list = monthList.filter(e => hitPm(e) && hitGenre(e));
   const total = list.reduce((a, e) => a + e.amount, 0);
 
   const fchip = (on, attr, value, color, label, amount) =>
@@ -1758,28 +1760,28 @@ function viewExpense() {
     esc(label) + '<span class="fc-num">' + yen(amount) + '</span></button>';
 
   const pmTabs =
-    fchip(expFilterPm === null, 'fpm', 'all', '', 'すべて',
+    fchip(!expFilterPm.length, 'fpm', 'all', '', 'すべて',
           forPmTabs.reduce((a, e) => a + e.amount, 0)) +
     state.paymentMethods
-      .filter(x => (pmTotals.get(x.id) || 0) > 0 || expFilterPm === x.id)
-      .map(x => fchip(expFilterPm === x.id, 'fpm', x.id, x.color, x.name, pmTotals.get(x.id) || 0)).join('');
+      .filter(x => (pmTotals.get(x.id) || 0) > 0 || expFilterPm.indexOf(x.id) !== -1)
+      .map(x => fchip(expFilterPm.indexOf(x.id) !== -1, 'fpm', x.id, x.color, x.name, pmTotals.get(x.id) || 0)).join('');
 
   const genreTabs =
-    fchip(expFilterGenre === null, 'fg', 'all', '', 'すべて',
+    fchip(!expFilterGenre.length, 'fg', 'all', '', 'すべて',
           forGenreTabs.reduce((a, e) => a + e.amount, 0)) +
     state.genres
-      .filter(x => (genreTotals.get(x.id) || 0) > 0 || expFilterGenre === x.id)
-      .map(x => fchip(expFilterGenre === x.id, 'fg', x.id, x.color, x.name, genreTotals.get(x.id) || 0)).join('');
+      .filter(x => (genreTotals.get(x.id) || 0) > 0 || expFilterGenre.indexOf(x.id) !== -1)
+      .map(x => fchip(expFilterGenre.indexOf(x.id) !== -1, 'fg', x.id, x.color, x.name, genreTotals.get(x.id) || 0)).join('');
 
   const filterTabs =
     '<div class="filter-wrap">' +
-    '<div class="filter-row"><span class="filter-label">支払方法で絞り込む</span>' + pmTabs + '</div>' +
-    '<div class="filter-row"><span class="filter-label">ジャンルで絞り込む</span>' + genreTabs + '</div>' +
+    '<div class="filter-row"><span class="filter-label">支払方法で絞り込む（複数選べます）</span>' + pmTabs + '</div>' +
+    '<div class="filter-row"><span class="filter-label">ジャンルで絞り込む（複数選べます）</span>' + genreTabs + '</div>' +
     '</div>';
 
   const picked = [];
-  if (expFilterPm !== null)    picked.push(pmById(expFilterPm).name);
-  if (expFilterGenre !== null) picked.push(genreById(expFilterGenre).name);
+  if (expFilterPm.length)    picked.push(expFilterPm.map(id => pmById(id).name).join('・'));
+  if (expFilterGenre.length) picked.push(expFilterGenre.map(id => genreById(id).name).join('・'));
   const pickedLabel = picked.length ? '（' + picked.join(' × ') + '）' : '';
 
   /* 月の予算（カード・現金）と、そこから引いた残り */
@@ -2552,10 +2554,16 @@ document.addEventListener('click', ev => {
   const erec = hit('data-edit-rec');
   if (erec) { editRecurring((state.recurring || []).find(x => x.id === +erec)); return; }
 
+  /* 同じものをもう一度押すと解除。「すべて」で全解除 */
+  const toggleFilter = (arr, v) => {
+    if (v === 'all') return [];
+    const id = Number(v), i = arr.indexOf(id);
+    return i === -1 ? arr.concat([id]) : arr.filter(x => x !== id);
+  };
   const fpm = hit('data-fpm');
-  if (fpm) { expFilterPm = fpm === 'all' ? null : Number(fpm); render(true); return; }
+  if (fpm) { expFilterPm = toggleFilter(expFilterPm, fpm); render(true); return; }
   const fg = hit('data-fg');
-  if (fg) { expFilterGenre = fg === 'all' ? null : Number(fg); render(true); return; }
+  if (fg) { expFilterGenre = toggleFilter(expFilterGenre, fg); render(true); return; }
 
   const de = hit('data-del-exp');
   if (de) { if (confirm('この出費記録を削除しますか？')) { state.expenses = state.expenses.filter(x => x.id !== +de); commit(); } return; }
